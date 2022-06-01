@@ -1,0 +1,26 @@
+{
+  "name": "tss-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "bn.js": "^5.2.1",
+    "eccrypto": "^1.1.6",
+    "elliptic": "^6.5.4",
+    "express": "^4.18.1",
+    "keccak256": "^1.0.6",
+    "sequelize": "^6.20.1",
+    "sqlite3": "^5.0.8",
+    "tss-lib": "file:../tss-lib/pkg"
+  },
+  "devDependencies": {
+    "sequelize-cli": "^6.4.1"
+  }
+}
