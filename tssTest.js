@@ -53,6 +53,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       );
     }
     var gwis = await Promise.all(awaiting);
+    gwis = gwis.map(obj => obj.commitment);
     // console.log("gwis", gwis)
 
     // get node h1h2ntilde
@@ -61,10 +62,11 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     for (let i = 1; i <= 6; i++) {
       let endpoint = `${endpoint_prefix}${base_port + i}`;
       awaiting.push(
-        axios.get(`${endpoint}/get_h1h2Ntilde`).then((res) => res.data)
+        axios.get(`${endpoint}/get_h1h2Ntilde`).then(res => res.data)
       );
     }
     var h1h2Ntildes = await Promise.all(awaiting);
+    h1h2Ntildes = h1h2Ntildes.map(obj => obj.h1h2Ntilde)
     // console.log("h1h2ntildes", h1h2Ntildes)
 
     // get node paillier eks
@@ -77,6 +79,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       );
     }
     var eks = await Promise.all(awaiting);
+    eks = eks.map(obj => obj.ek)
     // console.log("eks", eks)
 
     // publish pub key
@@ -110,7 +113,6 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     }
     await Promise.all(awaiting);
 
-
     // round 2 MessageA
     await new Promise((resolve) => setTimeout(resolve, delay));
     awaiting = [];
@@ -132,7 +134,6 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     await new Promise((resolve) => setTimeout(resolve, delay));
     awaiting = [];
 
-    console.log("ENDPOINTS", endpoints);
     for (let i = 1; i <= 6; i++) {
       let endpoint = `${endpoint_prefix}${base_port + i}`;
       awaiting.push(
@@ -335,6 +336,8 @@ assert.equal(reduced.toString(16), privKey.toString(16));
 
       partialSigs.push(resp.data);
     }
+
+    partialSigs = partialSigs.map(obj => obj.partialSig)
 
     // get signature
 
