@@ -154,7 +154,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
           endpoints,
           h1h2Ntildes,
           eks,
-        }).then(console.log)
+        })
       );
     }
     await Promise.all(awaiting);
