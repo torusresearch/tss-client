@@ -18,6 +18,7 @@
     "keccak256": "^1.0.6",
     "sequelize": "^6.20.1",
     "sqlite3": "^5.0.8",
+    "threads": "^1.7.0",
     "tss-lib": "file:../tss-lib/pkg"
   },
   "devDependencies": {

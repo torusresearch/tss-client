@@ -1,6 +1,4 @@
 const express = require("express");
-const { del } = require("express/lib/application");
-const { set } = require("lodash");
 const app = express();
 app.use(express.json());
 const port = process.argv[2];
@@ -8,9 +6,12 @@ const nodeKey = port;
 if (!port) {
   throw new Error("port not specified");
 }
+
+// const { spawn, Thread, Worker } = require('threads')
+
 const tss = require("tss-lib");
 
-const db = require("./db")(`${port}`);
+const db = require("./mem_db")(`${port}`);
 const { serverBroadcast, serverSend } = require("./comm");
 
 app.post("/broadcast", async (req, res) => {
@@ -25,7 +26,7 @@ app.post("/send", async (req, res) => {
   res.sendStatus(200);
 });
 
-app.get("/generate_node_info/findex", async (req, res) => {
+app.get("/generate_node_info/:index", async (req, res) => {
   let [keys, ek, h1h2Ntilde] = tss.generate_keys(parseInt(req.params.index));
   await Promise.all([
     db.set(`${nodeKey}:index`, req.params.index),
@@ -87,7 +88,10 @@ app.post("/round_2_MessageA", async (req, res) => {
   for (let i = 0; i < parties.length; i++) {
     let party = parties[i];
     if (party === index) continue;
+    let now = Date.now();
+    console.log("star time for message A", now);
     let [msgA, msgA_randomness] = tss.message_A(k_i, ek, h1h2Ntildes[i]);
+    console.log("time taken for message A", Date.now() - now);
     awaiting.push(db.set(`user-${user}:from-${index}:to-${party}:m_a`, msgA));
     awaiting.push(
       serverSend(
@@ -119,20 +123,38 @@ app.post("/round_2_MessageBs", async (req, res) => {
     let endpoint = endpoints[i];
     let ek = eks[i];
     let msgA = await db.get(`user-${user}:from-${party}:to-${index}:m_a`);
-    var [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] =
-      tss.message_Bs(gamma_i, w_i, ek, msgA, h1h2Ntilde);
-    await db.set(`user-${user}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma);
-    await db.set(
-      `user-${user}:from-${index}:to-${party}:beta_gamma`,
-      beta_gamma
+
+    let now = Date.now();
+    console.log("start time for message Bs", now);
+    
+    var [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] = tss.message_Bs(gamma_i, w_i, ek, msgA, h1h2Ntilde);
+    // let worker = await spawn(new Worker("./worker.js"));
+    // var [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] =
+    //   await worker.message_Bs(gamma_i, w_i, ek, msgA, h1h2Ntilde);
+    // await Thread.terminate(worker)
+    console.log("time taken for message Bs", Date.now() - now);
+
+    awaiting.push(
+      db.set(`user-${user}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma)
     );
-    await db.set(
-      `user-${user}:from-${index}:to-${party}:beta_randomness`,
-      beta_randomness
+    awaiting.push(
+      db.set(`user-${user}:from-${index}:to-${party}:beta_gamma`, beta_gamma)
     );
-    await db.set(`user-${user}:from-${index}:to-${party}:beta_tag`, beta_tag);
-    await db.set(`user-${user}:from-${index}:to-${party}:m_b_w`, m_b_w);
-    await db.set(`user-${user}:from-${index}:to-${party}:beta_wi`, beta_wi);
+    awaiting.push(
+      db.set(
+        `user-${user}:from-${index}:to-${party}:beta_randomness`,
+        beta_randomness
+      )
+    );
+    awaiting.push(
+      db.set(`user-${user}:from-${index}:to-${party}:beta_tag`, beta_tag)
+    );
+    awaiting.push(
+      db.set(`user-${user}:from-${index}:to-${party}:m_b_w`, m_b_w)
+    );
+    awaiting.push(
+      db.set(`user-${user}:from-${index}:to-${party}:beta_wi`, beta_wi)
+    );
     awaiting.push(
       serverSend(
         endpoint,
@@ -166,18 +188,21 @@ app.post("/round_2_Alphas", async (req, res) => {
   for (let i = 0; i < parties.length; i++) {
     let party = parties[i];
     if (party === index) continue;
-    m_b_gammas.push(
-      await db.get(`user-${user}:from-${party}:to-${index}:m_b_gamma`)
-    );
-    m_b_ws.push(await db.get(`user-${user}:from-${party}:to-${index}:m_b_w`));
+    m_b_gammas.push(db.get(`user-${user}:from-${party}:to-${index}:m_b_gamma`));
+    m_b_ws.push(db.get(`user-${user}:from-${party}:to-${index}:m_b_w`));
     beta_gammas.push(
-      await db.get(`user-${user}:from-${index}:to-${party}:beta_gamma`)
+      db.get(`user-${user}:from-${index}:to-${party}:beta_gamma`)
     );
-    beta_wis.push(
-      await db.get(`user-${user}:from-${index}:to-${party}:beta_wi`)
-    );
+    beta_wis.push(db.get(`user-${user}:from-${index}:to-${party}:beta_wi`));
   }
 
+  m_b_gammas = await Promise.all(m_b_gammas);
+  m_b_ws = await Promise.all(m_b_ws);
+  beta_gammas = await Promise.all(beta_gammas);
+  beta_wis = await Promise.all(beta_wis);
+
+  let now = Date.now();
+  console.log("start time for message_alphas", now);
   var [delta, sigma] = tss.message_Alphas(
     k_i,
     gamma_i,
@@ -191,10 +216,13 @@ app.post("/round_2_Alphas", async (req, res) => {
     index,
     parties
   );
-  await db.set(`node-${index}:${user}:delta`, delta);
-  await db.set(`${nodeKey}:${user}:sigma`, sigma);
+  console.log("time taken for message alphas", Date.now() - now);
 
-  await serverBroadcast(endpoints, `node-${index}:${user}:delta`, delta);
+  await Promise.all[
+    db.set(`node-${index}:${user}:delta`, delta),
+    db.set(`${nodeKey}:${user}:sigma`, sigma),
+    serverBroadcast(endpoints, `node-${index}:${user}:delta`, delta)
+  ];
   res.sendStatus(200);
 });
 
@@ -203,8 +231,9 @@ app.post("/round_3_DeltaInv", async (req, res) => {
   let deltas = [];
   for (let i = 0; i < parties.length; i++) {
     let party = parties[i];
-    deltas.push(await db.get(`node-${party}:${user}:delta`));
+    deltas.push(db.get(`node-${party}:${user}:delta`));
   }
+  deltas = await Promise.all(deltas);
   let deltaInv = tss.phase_3_deltaInv(deltas);
   await db.set(`${nodeKey}:${user}:delta_inv`, deltaInv);
   res.sendStatus(200);
@@ -214,8 +243,10 @@ app.post("/round_4_Di", async (req, res) => {
   let { user, index, endpoints } = req.body;
   let Di = await db.get(`${nodeKey}:${user}:g_gamma_i`);
   let Diblind = await db.get(`${nodeKey}:${user}:blind_factor`);
-  await serverBroadcast(endpoints, `node-${index}:${user}:D_i`, Di);
-  await serverBroadcast(endpoints, `node-${index}:${user}:D_i_blind`, Diblind);
+  await Promise.all[
+    (serverBroadcast(endpoints, `node-${index}:${user}:D_i`, Di),
+    serverBroadcast(endpoints, `node-${index}:${user}:D_i_blind`, Diblind))
+  ];
   res.sendStatus(200);
 });
 
@@ -228,17 +259,22 @@ app.post("/round_4_Di_verify", async (req, res) => {
   for (let i = 0; i < parties.length; i++) {
     let party = parties[i];
     // note: these are length of n, other arrays are length n - 1
-    g_gamma_is.push(await db.get(`node-${party}:${user}:D_i`));
-    coms.push(await db.get(`node-${party}:${user}:com`));
-    blind_factors.push(await db.get(`node-${party}:${user}:D_i_blind`));
+    g_gamma_is.push(db.get(`node-${party}:${user}:D_i`));
+    coms.push(db.get(`node-${party}:${user}:com`));
+    blind_factors.push(db.get(`node-${party}:${user}:D_i_blind`));
     if (party === index) {
       continue;
     }
-    let m_b_gamma = await db.get(
-      `user-${user}:from-${party}:to-${index}:m_b_gamma`
-    );
-    b_proofs.push(tss.get_b_proof(m_b_gamma));
+    let m_b_gamma = db
+      .get(`user-${user}:from-${party}:to-${index}:m_b_gamma`)
+      .then(tss.get_b_proof);
+    b_proofs.push(m_b_gamma);
   }
+
+  g_gamma_is = await Promise.all(g_gamma_is);
+  coms = await Promise.all(coms);
+  blind_factors = await Promise.all(blind_factors);
+  b_proofs = await Promise.all(b_proofs);
 
   let deltaInv = await db.get(`${nodeKey}:${user}:delta_inv`);
   let R = tss.phase_4_Di_verify(
