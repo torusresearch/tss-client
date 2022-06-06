@@ -382,7 +382,6 @@ app.post("/get_signature", async (req, res) => {
   let { s_is, user, msg_hash } = req.body;
   let y = await db.get(`user-${user}:pubkey`);
   let R = await db.get(`${nodeKey}:${user}:R`);
-  console.log({y, msg_hash, R, s_is})
   res.send({ sig: tss.get_signature(y, msg_hash, R, s_is) });
 });
 
