@@ -244,8 +244,8 @@ app.post("/round_4_Di", async (req, res) => {
   let Di = await db.get(`${nodeKey}:${user}:g_gamma_i`);
   let Diblind = await db.get(`${nodeKey}:${user}:blind_factor`);
   await Promise.all[
-    (serverBroadcast(endpoints, `node-${index}:${user}:D_i`, Di),
-    serverBroadcast(endpoints, `node-${index}:${user}:D_i_blind`, Diblind))
+    serverBroadcast(endpoints, `node-${index}:${user}:D_i`, Di),
+    serverBroadcast(endpoints, `node-${index}:${user}:D_i_blind`, Diblind)
   ];
   res.sendStatus(200);
 });
