@@ -234,21 +234,13 @@ app.post("/round_4_Di_verify", async (req, res) => {
     if (party === index) {
       continue;
     }
-    let m_b_gamma = await db.get(`user-${user}:from-${party}:to-${index}:m_b_gamma`);
-    b_proofs.push(tss.get_b_proof(m_b_gamma))
+    let m_b_gamma = await db.get(
+      `user-${user}:from-${party}:to-${index}:m_b_gamma`
+    );
+    b_proofs.push(tss.get_b_proof(m_b_gamma));
   }
 
-
   let deltaInv = await db.get(`${nodeKey}:${user}:delta_inv`);
-  console.log({
-    coms,
-    g_gamma_is,
-    blind_factors,
-    b_proofs,
-    deltaInv,
-    index,
-    parties
-  });
   let R = tss.phase_4_Di_verify(
     coms,
     g_gamma_is,
@@ -259,6 +251,79 @@ app.post("/round_4_Di_verify", async (req, res) => {
     parties
   );
   await db.set(`${nodeKey}:${user}:R`, R);
+  res.sendStatus(200);
+});
+
+app.post("/round_5_Rki", async (req, res) => {
+  try {
+    let { user, index, parties, endpoints, h1h2Ntildes } = req.body;
+    let R = await db.get(`${nodeKey}:${user}:R`);
+    let k_i = await db.get(`${nodeKey}:${user}:k_i`);
+    let keys = await db.get(`${nodeKey}:keys`);
+    let m_as = [];
+    let m_a_randoms = [];
+    for (let i = 0; i < parties.length; i++) {
+      let party = parties[i];
+      if (index === party) continue;
+      m_as.push(await db.get(`user-${user}:from-${index}:to-${party}:m_a`));
+      m_a_randoms.push(
+        await db.get(`user-${user}:from-${index}:to-${party}:m_a_randomness`)
+      );
+    }
+    let proofs = tss.phase_5_Rki(
+      R,
+      k_i,
+      m_as,
+      m_a_randoms,
+      h1h2Ntildes,
+      keys,
+      index,
+      parties
+    );
+  
+    let Rki = proofs.shift();
+    await serverBroadcast(endpoints, `node-${index}:${user}:R_k_i`, Rki);
+
+    for (let i = 0; i < parties.length; i++) {
+      let party = parties[i];
+      if (party === index) continue;
+      let ind = party < index ? i : i - 1;
+      await db.set(`user-${user}:from-${index}:to-${party}:proof_pdl`, proofs[ind]);
+      await serverSend(
+        endpoints[i],
+        `user-${user}:from-${index}:to-${party}:proof_pdl`,
+        proofs[ind]
+      );
+    }
+  
+    res.sendStatus(200);
+  } catch (e) {
+    console.error(e)
+  }
+});
+
+app.post("/round_5_verify", async (req, res) => {
+  let { user, index, parties, eks } = req.body;
+  let Rkis = [];
+  let msgAs = [];
+  let proofs = [];
+  let proofs_Rkis = [];
+  let h1h2Ntilde = await db.get(`${nodeKey}:h1h2Ntilde`);
+  let R = await db.get(`${nodeKey}:${user}:R`);
+  
+  for (let i = 0; i < parties.length; i++) {
+    let party = parties[i];
+    Rkis.push(await db.get(`node-${party}:${user}:R_k_i`))
+    if (party === index) continue;
+    proofs_Rkis.push(await db.get(`node-${party}:${user}:R_k_i`));
+    msgAs.push(await db.get(`user-${user}:from-${party}:to-${index}:m_a`));
+    proofs.push(await db.get(`user-${user}:from-${party}:to-${index}:proof_pdl`))
+  }
+  let verify = tss.phase_5_verify(Rkis, eks, msgAs, proofs, proofs_Rkis, h1h2Ntilde, R, index, parties);
+  if (!verify) {
+    throw new Error("failed verification check for phase 5")
+  }
+
   res.sendStatus(200);
 });
 
