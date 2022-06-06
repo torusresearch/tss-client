@@ -323,7 +323,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     let offlinephasestart = process.hrtime();
 
     // round 7
-    var partialSigs = [];
+    var s_is = [];
     for (let i = 1; i <= 6; i++) {
       let endpoint = `${endpoint_prefix}${base_port + i}`;
       let resp = await axios.post(`${endpoint}/round_7`, {
@@ -334,19 +334,20 @@ assert.equal(reduced.toString(16), privKey.toString(16));
         endpoints,
       });
 
-      partialSigs.push(resp.data);
+      s_is.push(resp.data);
     }
 
-    partialSigs = partialSigs.map(obj => obj.partialSig)
+    s_is = s_is.map(obj => obj.s_i)
 
     // get signature
 
     let endpoint = `${endpoint_prefix}${base_port + 1}`;
     var resp = await axios.post(
-      `${endpoint}/get_signature?u=${user}`,
-      partialSigs
+      `${endpoint}/get_signature`,
+      {s_is, user, msg_hash: new BN(msgHash).toString("hex")}
     );
-    var sig = resp.data;
+    var sig = JSON.parse(resp.data.sig);
+    
 
     let hexToDecimal = (x) =>
       ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
