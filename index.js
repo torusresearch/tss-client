@@ -160,7 +160,6 @@ app.post("/round_2_MessageBs", async (req, res) => {
     let ek = eks[i];
     let msgA = await db.get(`user-${user}:from-${party}:to-${index}:m_a`);
 
-
     console.log("INPUT TO MESSAGE B GENERATION!! \n", {gamma_i, w_i, ek, msgA, h1h2Ntilde});
     
     awaiting.push(work(workerCounter++, "message_Bs", [gamma_i, w_i, ek, msgA, h1h2Ntilde])
