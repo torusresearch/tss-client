@@ -12,7 +12,7 @@ var base_port = 8000;
 var endpoint_prefix = "http://localhost:";
 var msg = "hello world";
 var msgHash = keccak256(msg);
-var user = "test";
+var tag = "test";
 var parties = [1, 2, 3, 4, 5, 6];
 var endpoints = parties.map(
   (party) => `${endpoint_prefix}${base_port + parseInt(party)}`
@@ -49,7 +49,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios
           .post(`${endpoint}/share`, {
-            user,
+            tag,
             share: share.toString(16),
           })
           .then((res) => res.data)
@@ -95,7 +95,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     for (let i = 1; i <= 6; i++) {
       let endpoint = `${endpoint_prefix}${base_port + i}`;
       awaiting.push(
-        axios.post(`${endpoint}/pubkey/${user}`, {
+        axios.post(`${endpoint}/pubkey/${tag}`, {
           X: pubkey.x.toString("hex"),
           Y: pubkey.y.toString("hex"),
         })
@@ -112,7 +112,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_1`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -129,7 +129,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_2_MessageA`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
           h1h2Ntildes,
@@ -149,7 +149,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_2_MessageBs`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
           h1h2Ntildes,
@@ -169,7 +169,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_2_Alphas`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
           gwis,
@@ -188,7 +188,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_3_DeltaInv`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -204,7 +204,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     //   awaiting.push(
     //     axios.post(`${endpoint}/round_3_Ti`, {
     //       index: i,
-    //       u: user,
+    //       u: tag,
     //       parties,
     //       endpoints,
     //     })
@@ -220,7 +220,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     //   awaiting.push(
     //     axios.post(`${endpoint}/round_3_Ti_verify`, {
     //       index: i,
-    //       u: user,
+    //       u: tag,
     //       parties,
     //       endpoints,
     //     })
@@ -239,7 +239,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_4_Di`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -258,7 +258,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_4_Di_verify`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -277,7 +277,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_5_Rki`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
           h1h2Ntildes,
@@ -297,7 +297,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_5_verify`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
           eks,
@@ -317,7 +317,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_6_Rsigmai`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -336,7 +336,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       awaiting.push(
         axios.post(`${endpoint}/round_6_verify`, {
           index: i,
-          user,
+          tag,
           parties,
           endpoints,
         })
@@ -366,7 +366,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       let endpoint = `${endpoint_prefix}${base_port + i}`;
       let resp = await axios.post(`${endpoint}/round_7`, {
         index: i,
-        user,
+        tag,
         msg_hash: new BN(msgHash).toString("hex"),
         parties,
         endpoints,
@@ -382,7 +382,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     let endpoint = `${endpoint_prefix}${base_port + 1}`;
     var resp = await axios.post(`${endpoint}/get_signature`, {
       s_is,
-      user,
+      tag,
       msg_hash: new BN(msgHash).toString("hex"),
     });
     var sig = JSON.parse(resp.data.sig);
