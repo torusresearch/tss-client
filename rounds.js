@@ -3,7 +3,7 @@ const getTagInfo = async function (db, tag) {
   return JSON.parse(tagInfo);
 };
 
-function createRoundTracker(players) {
+function createRoundTracker(parties) {
   let roundTracker = {};
 
   // round 1 commitment broadcast
@@ -11,50 +11,50 @@ function createRoundTracker(players) {
 
   // round 1 commitment received
   roundTracker.round_1_commitment_received = {};
-  players.map((player) => {
-    roundTracker.round_1_commitment_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_1_commitment_received[party.toString()] = false;
   });
 
   // round 2 message A sent
   roundTracker.round_2_MessageA_sent = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageA_sent[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageA_sent[party.toString()] = false;
   });
 
   // round 2 message A received
   roundTracker.round_2_MessageA_received = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageA_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageA_received[party.toString()] = false;
   });
 
   // round 2 message Bs gamma sent
   roundTracker.round_2_MessageBs_gamma_sent = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageBs_gamma_sent[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageBs_gamma_sent[party.toString()] = false;
   });
 
   // round 2 message Bs gamma received
   roundTracker.round_2_MessageBs_gamma_received = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageBs_gamma_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageBs_gamma_received[party.toString()] = false;
   });
 
   // round 2 message Bs w sent
   roundTracker.round_2_MessageBs_w_sent = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageBs_w_sent[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageBs_w_sent[party.toString()] = false;
   });
 
   // round 2 message Bs w received
   roundTracker.round_2_MessageBs_w_received = {};
-  players.map((player) => {
-    roundTracker.round_2_MessageBs_w_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_MessageBs_w_received[party.toString()] = false;
   });
 
   // round 2 message Alphas generated
   roundTracker.round_2_Alphas = {};
-  players.map((player) => {
-    roundTracker.round_2_Alphas[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_2_Alphas[party.toString()] = false;
   });
 
   // round 3 delta broadcast
@@ -62,8 +62,8 @@ function createRoundTracker(players) {
 
   // round 3 deltas received
   roundTracker.round_3_Delta_received = {};
-  players.map((player) => {
-    roundTracker.round_3_Delta_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_3_Delta_received[party.toString()] = false;
   });
 
   // round 4 Di broadcast
@@ -71,8 +71,8 @@ function createRoundTracker(players) {
 
   // round 4 Di received
   roundTracker.round_4_Di_received = {};
-  players.map((player) => {
-    roundTracker.round_4_Di_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_4_Di_received[party.toString()] = false;
   });
 
   // round 4 Di verify
@@ -83,8 +83,8 @@ function createRoundTracker(players) {
 
   // round 5 Rki received
   roundTracker.round_5_Rki_received = {};
-  players.map((player) => {
-    roundTracker.round_5_Rki_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_5_Rki_received[party.toString()] = false;
   });
 
   // round 5 Rki verified
@@ -95,8 +95,8 @@ function createRoundTracker(players) {
 
   // round 6 Rsigmai received
   roundTracker.round_6_Rsigmai_received = {};
-  players.map((player) => {
-    roundTracker.round_6_Rsigmai_received[player.toString()] = false;
+  parties.map((party) => {
+    roundTracker.round_6_Rsigmai_received[party.toString()] = false;
   });
 
   // round 6 Rsigmai verified
@@ -112,7 +112,13 @@ const roundTrackerLocks = {};
 
 // the purpose of roundRunner is to prevent duplicate messages from being sent
 // it does not prevent duplicate messages from being received
-async function roundRunner(db, tag, roundName, player) {
+async function roundRunner(
+  db,
+  tag,
+  roundName,
+  serverSend,
+  serverBroadcast
+) {
   let resolve, reject;
   if (db === undefined || tag === undefined || roundName === undefined) {
     throw new Error(
@@ -138,13 +144,11 @@ async function roundRunner(db, tag, roundName, player) {
   }
 
   let roundTracker = JSON.parse(await db.get(`tag-${tag}:rounds`));
-  let tagInfo = getTagInfo(db, tag);
+  let { parties, endpoints, eks } = await getTagInfo(db, tag);
 
-  if (!checkKeys(roundTracker, tagInfo.players.length)) {
+  if (!checkKeys(roundTracker, players.length)) {
     throw new Error("roundTracker is invalid");
   }
-
-  let players = tagInfo.players;
 
   if (roundName === "round_1_commitment_broadcast") {
     if (roundTracker.round_1_commitment_broadcast === false) {
@@ -152,12 +156,26 @@ async function roundRunner(db, tag, roundName, player) {
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       resolve();
       // run round 1 here
+      let index = await db.get(`${nodeKey}:index`);
+      let gamma_i = tss.random_bigint();
+      let [com, blind_factor, g_gamma_i] = tss.phase_1_broadcast(gamma_i);
+      let k_i = tss.random_bigint();
+      await Promise.all([
+        db.set(`${nodeKey}:${tag}:com`, com),
+        db.set(`${nodeKey}:${tag}:blind_factor`, blind_factor),
+        db.set(`${nodeKey}:${tag}:g_gamma_i`, g_gamma_i),
+        db.set(`${nodeKey}:${tag}:k_i`, k_i),
+        db.set(`${nodeKey}:${tag}:gamma_i`, gamma_i),
+      ]);
+      await serverBroadcast(endpoints, `node-${index}:${tag}:com`, com);
       return;
     }
-    return reject("round 1 commitment broadcast has already been sent");
+    return reject(
+      new Error("round 1 commitment broadcast has already been sent")
+    );
   } else if (roundName === "round_1_commitment_received") {
     if (player === undefined)
-      return reject("round 1 commitment received from unknown");
+      return reject(new Error("round 1 commitment received from unknown"));
     roundTracker.round_1_commitment_received[player] = true;
     // check if all commitments have been received
     if (allTrue(roundTracker.round_1_commitment_received)) {
@@ -180,7 +198,7 @@ async function roundRunner(db, tag, roundName, player) {
     resolve();
   } else if (roundName === "round_2_MessageA_received") {
     if (player === undefined)
-      return reject("round 2 message A received from unknown");
+      return reject(new Error("round 2 message A received from unknown"));
     roundTracker.round_2_MessageA_received[player] = true;
     if (
       roundTracker.round_2_MessageBs_gamma_sent[player] === true ||
@@ -201,7 +219,7 @@ async function roundRunner(db, tag, roundName, player) {
     roundName === "round_2_MessageBs_w_received"
   ) {
     if (player === undefined)
-      return reject("round 2 message B received from unknown");
+      return reject(new Error("round 2 message B received from unknown"));
     roundTracker[roundName][player] = true;
     if (
       allTrue(roundTracker.round_2_MessageBs_w_received) &&
@@ -216,7 +234,7 @@ async function roundRunner(db, tag, roundName, player) {
         // run round 2 alpha generation here
       }
       if (roundTracker.round_3_Delta_broadcast === true) {
-        return reject("round 3 delta already broadcast");
+        return reject(new Error("round 3 delta already broadcast"));
       }
       roundTracker.round_3_Delta_broadcast = true;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
@@ -227,11 +245,11 @@ async function roundRunner(db, tag, roundName, player) {
     resolve();
   } else if (roundName === "round_3_Delta_received") {
     if (player === undefined)
-      return reject("round 3 delta broadcast received from unknown");
+      return reject(new Error("round 3 delta broadcast received from unknown"));
     roundTracker.round_3_Delta_broadcast[player] = true;
     if (allTrue(roundTracker.round_3_Delta_broadcast)) {
       if (roundTracker.round_4_Di_broadcast === true) {
-        return reject("round 4 Di already broadcast");
+        return reject(new Error("round 4 Di already broadcast"));
       }
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       resolve();
@@ -240,13 +258,14 @@ async function roundRunner(db, tag, roundName, player) {
     await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
     resolve();
   } else if (roundName === "round_4_Di_received") {
-    if (player === undefined) return reject("round 4 received from unknown");
+    if (player === undefined)
+      return reject(new Error("round 4 received from unknown"));
     roundTracker.round_4_Di_received[player] = true;
     if (allTrue(roundTracker.round_4_Di_received)) {
       // run round 4 Di verify
       let verified = false;
       if (!verified) {
-        return reject("round 4 Di verify failed");
+        return reject(new Error("round 4 Di verify failed"));
       }
       roundTracker.round_4_Di_verified = true;
       roundTracker.round_5_Rki_broadcast = true;
@@ -257,13 +276,14 @@ async function roundRunner(db, tag, roundName, player) {
     await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
     resolve();
   } else if (roundName === "round_5_Rki_received") {
-    if (player === undefined) return reject("round 5 received from unknown");
+    if (player === undefined)
+      return reject(new Error("round 5 received from unknown"));
     roundTracker.round_5_Rki_received[player] = true;
     if (allTrue(roundTracker.round_5_Rki_received)) {
       // run round 5 Rki verify
       let verified = false;
       if (!verified) {
-        return reject("round 5 Rki verify failed");
+        return reject(new Error("round 5 Rki verify failed"));
       }
       roundTracker.round_5_Rki_verified = true;
       roundTracker.round_6_Rsigmai_broadcast = true;
@@ -274,13 +294,14 @@ async function roundRunner(db, tag, roundName, player) {
     await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
     resolve();
   } else if (roundName === "round_6_Rsigmai_received") {
-    if (player === undefined) return reject("round 6 received from unknown");
+    if (player === undefined)
+      return reject(new Error("round 6 received from unknown"));
     roundTracker.round_6_Rsigmai_received[player] = true;
     if (allTrue(roundTrack.round_6_Rsigmai_received)) {
       // run round 6 verify
       let verified = false;
       if (!verified) {
-        return reject("round 6 Rsigmai verify failed");
+        return reject(new Error("round 6 Rsigmai verify failed"));
       }
       roundTracker.round_6_Rsigmai_verified = true;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
