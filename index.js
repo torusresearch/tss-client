@@ -7,24 +7,69 @@ const nodeKey = port;
 if (!port) {
   throw new Error("port not specified");
 }
-const { createRoundTracker, getTagInfo } = require("./rounds");
+const { createRoundTracker, getTagInfo, roundRunner } = require("./rounds");
 const { work, workerNum } = require("./work");
 const tss = require("tss-lib");
 
-const db = require("./mem_db")(`${port}`);
+const db = require("./fs_db")(`${port}`);
 const { serverBroadcast, serverSend } = require("./comm");
 
+
+function getRound(key) {
+  let segments = key.split(":")
+  if (key.indexOf("start") !== -1) {
+    return "round_1_commitment_broadcast"
+  }
+  if (segments[segments.length - 1] === "com") {
+    return "round_1_commitment_received"
+  }
+  if (segments[segments.length - 1] === "m_a") {
+    return "round_2_MessageA_received"
+  }
+  if (segments[segments.length - 1] === "m_b_gamma") {
+    return "round_2_MessageBs_gamma_received"
+  }
+  if (segments[segments.length - 1] === "m_b_w") {
+    return "round_2_MessageBs_w_received"
+  }
+  if (segments[segments.length - 1] === "delta") {
+    return "round_3_Delta_received"
+  }
+  if (segments[segments.length - 1] === "D_i_and_blind") {
+    return "round_4_Di_received"
+  }
+  if (segments[segments.length - 1] === "R_k_i") {
+    return "round_5_Rki_received"
+  }
+  if (segments[segments.length - 1] === "S_i") {
+    return "round_6_Rsigmai_received"
+  }
+  throw new Error(`could not identify round name ${JSON.stringify(arguments)}`)
+}
+
 app.post("/broadcast", async (req, res) => {
-  const { key, value } = req.body;
+  console.log("RECEIVED BROADCAST", JSON.stringify(req.body))
+  const { tag, key, value, sender } = req.body;
   await db.set(key, value);
   res.sendStatus(200);
+  const roundName = getRound(key)
+  roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast)
 });
 
 app.post("/send", async (req, res) => {
-  const { key, value } = req.body;
+  console.log("RECEIVED SEND", JSON.stringify(req.body))
+  const { tag, key, value, sender } = req.body;
   await db.set(key, value);
   res.sendStatus(200);
+  const roundName = getRound(key)
+  roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast)
 });
+
+app.post("/start", async(req, res) => {
+  const { tag } = req.body
+  const roundName = getRound("start")
+  roundRunner(nodeKey, db, tag, roundName, undefined, serverSend, serverBroadcast)
+})
 
 app.get("/generate_node_info/:index", async (req, res) => {
   let [keys, ek, h1h2Ntilde] = tss.generate_keys(parseInt(req.params.index));
@@ -69,7 +114,8 @@ app.post("/set_tag_info/:tag", async (req, res) => {
   let tagInfo = req.body;
   tagInfo.pubkey = tss.coords_to_pt(tagInfo.pubkey.X, tagInfo.pubkey.Y);
   await db.set(`tag-${req.params.tag}:info`, JSON.stringify(tagInfo));
-  // await db.set(`tag-${req.params.tag}:rounds`, JSON.stringify(createRoundTracker(tagInfo.players)));
+  let index = await db.get(`${nodeKey}:index`);
+  await db.set(`tag-${req.params.tag}:rounds`, JSON.stringify(createRoundTracker(tagInfo.parties, index)));
   res.sendStatus(200);
 });
 
