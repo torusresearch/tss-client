@@ -88,6 +88,20 @@ function createRoundTracker(parties, selfIndex) {
   // round 4 Di verify
   roundTracker.round_4_Di_verified = false;
 
+  // round 5 proof pdl sent
+  roundTracker.round_5_proof_pdl_sent = {};
+  parties.map((party) => {
+    if (selfIndex.toString() !== party.toString())
+      roundTracker.round_5_proof_pdl_sent[party.toString()] = false;
+  });
+
+  // round 5 proof pdl recieved
+  roundTracker.round_5_proof_pdl_received = {};
+  parties.map((party) => {
+    if (selfIndex.toString() !== party.toString())
+      roundTracker.round_5_proof_pdl_received[party.toString()] = false;
+  });
+
   // round 5 Rki broadcast
   roundTracker.round_5_Rki_broadcast = false;
 
@@ -161,7 +175,7 @@ async function roundRunner(
     }
 
     let roundTracker = JSON.parse(await db.get(`tag-${tag}:rounds`));
-    let { parties, endpoints, eks, h1h2Ntildes, gwis } = await getTagInfo(
+    let { parties, endpoints, eks, h1h2Ntildes, gwis, pubkey } = await getTagInfo(
       db,
       tag
     );
@@ -224,31 +238,27 @@ async function roundRunner(
         let awaiting = [];
         for (let i = 0; i < parties.length; i++) {
           let p = parties[i].toString();
-          if (p === index.toString()) {
-            console.log(
-              "SKIPPING WHEN ITS THE SAME DONT SEND MSG A TO YOURSELF"
-            );
-            continue;
-          }
+          if (p === index.toString()) continue;
           let endpoint = endpoints[i];
           awaiting.push(
             work(workerNum(), "message_A", [k_i, ek, h1h2Ntildes[i]]).then(
               (res) => {
                 let [msgA, msgA_randomness] = res;
                 return Promise.all([
-                  db.set(`tag-${tag}:from-${index}:to-${party}:m_a`, msgA),
+                  db.set(`tag-${tag}:from-${index}:to-${p}:m_a`, msgA),
                   db.set(
                     `tag-${tag}:from-${index}:to-${p}:m_a_randomness`,
                     msgA_randomness
                   ),
-                  serverSend(
+                ]).then(() => {
+                  return serverSend(
                     index,
                     tag,
                     endpoint,
                     `tag-${tag}:from-${index}:to-${p}:m_a`,
                     msgA
-                  ),
-                ]);
+                  );
+                });
               }
             )
           );
@@ -330,7 +340,6 @@ async function roundRunner(
         allTrue(roundTracker.round_2_MessageBs_w_received) &&
         allTrue(roundTracker.round_2_MessageBs_gamma_received)
       ) {
-        // console.log("TRYING TO GENERATE AND BROADCAST DELTA")
         // update roundTracker and release lock
         for (let i = 0; i < parties.length; i++) {
           let p = parties[i].toString();
@@ -370,20 +379,6 @@ async function roundRunner(
         m_b_ws = await Promise.all(m_b_ws);
         beta_gammas = await Promise.all(beta_gammas);
         beta_wis = await Promise.all(beta_wis);
-
-        // console.log("messagealphas", [
-        //   k_i,
-        //   gamma_i,
-        //   w_i,
-        //   keys,
-        //   gwis,
-        //   m_b_gammas,
-        //   m_b_ws,
-        //   beta_gammas,
-        //   beta_wis,
-        //   index,
-        //   parties,
-        // ], "message alpha")
 
         var [delta, sigma] = await work(workerNum(), "message_Alphas", [
           k_i,
@@ -500,6 +495,9 @@ async function roundRunner(
         await db.set(`${nodeKey}:${tag}:R`, R);
         roundTracker.round_4_Di_verified = true;
         roundTracker.round_5_Rki_broadcast = true;
+        for (let party in roundTracker.round_5_proof_pdl_sent) {
+          roundTracker.round_5_proof_pdl_sent[party] = true;
+        }
         await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
         release();
 
@@ -516,13 +514,6 @@ async function roundRunner(
             await db.get(`tag-${tag}:from-${index}:to-${p}:m_a_randomness`)
           );
         }
-        m_as.map((m_a) => {
-          if (m_a == undefined) {
-            console.log("m_as", m_as);
-            console.log("ROUNDTRACKER", JSON.stringify(roundTracker));
-            throw new Error("wtf");
-          }
-        });
         let proofs = tss.phase_5_Rki(
           R,
           k_i,
@@ -534,10 +525,14 @@ async function roundRunner(
           parties
         );
         let Rki = proofs.shift();
-        for (let i = 0; i < parties.length; i++) {
+        
+        for (let i = 0, passedIndex = false; i < parties.length; i++) {
           let p = parties[i].toString();
-          if (p === index.toString()) continue;
-          let ind = p < index ? i : i - 1;
+          if (p === index.toString()) {
+            passedIndex = true;
+            continue; 
+          }
+          let ind = !passedIndex ? i : i - 1;
           let endpoint = endpoints[i];
           await db.set(
             `tag-${tag}:from-${index}:to-${p}:proof_pdl`,
@@ -562,10 +557,16 @@ async function roundRunner(
       }
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
-    } else if (roundName === "round_5_Rki_received") {
+    } else if (
+      roundName === "round_5_Rki_received" ||
+      roundName === "round_5_proof_pdl_received"
+    ) {
       if (party === undefined) throw new Error("round 5 received from unknown");
-      roundTracker.round_5_Rki_received[party] = true;
-      if (allTrue(roundTracker.round_5_Rki_received)) {
+      roundTracker[roundName][party] = true;
+      if (
+        allTrue(roundTracker.round_5_Rki_received) &&
+        allTrue(roundTracker.round_5_proof_pdl_received)
+      ) {
         // run round 5 Rki verify
         let Rkis = [];
         let msgAs = [];
@@ -596,17 +597,6 @@ async function roundRunner(
           parties
         );
         if (!verify) {
-          console.log("verify failed", {
-            Rkis,
-            eks,
-            msgAs,
-            proofs,
-            proofs_Rkis,
-            h1h2Ntilde,
-            R,
-            index,
-            parties,
-          });
           throw new Error("failed verification check for phase 5");
         }
         roundTracker.round_5_Rki_verified = true;

@@ -38,6 +38,9 @@ function getRound(key) {
   if (segments[segments.length - 1] === "D_i_and_blind") {
     return "round_4_Di_received"
   }
+  if (segments[segments.length - 1] === "proof_pdl") {
+    return "round_5_proof_pdl_received"
+  }
   if (segments[segments.length - 1] === "R_k_i") {
     return "round_5_Rki_received"
   }
@@ -68,7 +71,8 @@ app.post("/send", async (req, res) => {
 app.post("/start", async(req, res) => {
   const { tag } = req.body
   const roundName = getRound("start")
-  roundRunner(nodeKey, db, tag, roundName, undefined, serverSend, serverBroadcast)
+  await roundRunner(nodeKey, db, tag, roundName, undefined, serverSend, serverBroadcast)
+  res.sendStatus(200)
 })
 
 app.get("/generate_node_info/:index", async (req, res) => {
@@ -478,6 +482,16 @@ app.post("/round_7", async (req, res) => {
   let [s_i, local_sig] = tss.phase_7_sign(msg_hash, k_i, R, sigma_i, pubkey);
   res.send({ s_i });
 });
+
+app.post("/sign", async (req, res) => {
+  let { tag, msg_hash } = req.body;
+  let { pubkey } = await getTagInfo(db, tag);
+  let k_i = await db.get(`${nodeKey}:${tag}:k_i`);
+  let R = await db.get(`${nodeKey}:${tag}:R`);
+  let sigma_i = await db.get(`${nodeKey}:${tag}:sigma`);
+  let [s_i, local_sig] = tss.phase_7_sign(msg_hash, k_i, R, sigma_i, pubkey);
+  res.send({ s_i });
+})
 
 app.post("/get_signature", async (req, res) => {
   let { s_is, tag, msg_hash } = req.body;

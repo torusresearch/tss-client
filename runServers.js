@@ -7,6 +7,7 @@ let base_port = 8000;
       "./index.js",
       `${base_port + i}`
     ]);
+    if (i !== 1) continue
     tssServer.stdout.on(
       "data",
       (function (index) {
