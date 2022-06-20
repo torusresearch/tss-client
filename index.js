@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const express = require("express");
 const app = express();
 app.use(express.json());
@@ -8,31 +8,7 @@ if (!port) {
   throw new Error("port not specified");
 }
 const { createRoundTracker, getTagInfo } = require("./rounds");
-const path = require("path");
-const os = require("os");
-const { Worker, MessageChannel, parentPort } = require("worker_threads");
-
-const workers = [];
-let workerCounter = 0;
-async function work(workerIndex, method, args) {
-  workerIndex = workerIndex % workers.length;
-  let worker = workers[workerIndex];
-  const data = { method, args };
-  const mc = new MessageChannel();
-  const res = new Promise((resolve) => {
-    mc.port1.once("message", ({ data }) => resolve(data));
-  });
-  const ports = [mc.port2];
-  worker.postMessage({ data, ports }, ports);
-  const finalRes = await res;
-  return finalRes;
-}
-
-for (let i = 0; i < os.cpus().length; i++) {
-  const worker = new Worker(path.resolve(__dirname, "./calc.js"));
-  workers.push(worker);
-}
-
+const { work, workerNum } = require("./work");
 const tss = require("tss-lib");
 
 const db = require("./mem_db")(`${port}`);
@@ -93,7 +69,7 @@ app.post("/set_tag_info/:tag", async (req, res) => {
   let tagInfo = req.body;
   tagInfo.pubkey = tss.coords_to_pt(tagInfo.pubkey.X, tagInfo.pubkey.Y);
   await db.set(`tag-${req.params.tag}:info`, JSON.stringify(tagInfo));
-  await db.set(`tag-${req.params.tag}:rounds`, JSON.stringify(createRoundTracker(tagInfo.players)));
+  // await db.set(`tag-${req.params.tag}:rounds`, JSON.stringify(createRoundTracker(tagInfo.players)));
   res.sendStatus(200);
 });
 
@@ -129,7 +105,7 @@ app.post("/round_2_MessageA", async (req, res) => {
     let party = parties[i];
     if (party === index) continue;
     awaiting.push(
-      work(workerCounter++, "message_A", [k_i, ek, h1h2Ntildes[i]]).then(
+      work(workerNum(), "message_A", [k_i, ek, h1h2Ntildes[i]]).then(
         (res) => {
           let [msgA, msgA_randomness] = res;
           return Promise.all([
@@ -168,7 +144,7 @@ app.post("/round_2_MessageBs", async (req, res) => {
     let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
 
     awaiting.push(
-      work(workerCounter++, "message_Bs", [
+      work(workerNum(), "message_Bs", [
         gamma_i,
         w_i,
         ek,
@@ -232,7 +208,7 @@ app.post("/round_2_Alphas", async (req, res) => {
   beta_gammas = await Promise.all(beta_gammas);
   beta_wis = await Promise.all(beta_wis);
 
-  var [delta, sigma] = await work(workerCounter++, "message_Alphas", [
+  var [delta, sigma] = await work(workerNum(), "message_Alphas", [
     k_i,
     gamma_i,
     w_i,
@@ -272,10 +248,14 @@ app.post("/round_4_Di", async (req, res) => {
   let { tag } = req.body;
   let { endpoints } = await getTagInfo(db, tag);
   let index = await db.get(`${nodeKey}:index`);
-  let Di = await db.get(`${nodeKey}:${tag}:g_gamma_i`);
-  let Diblind = await db.get(`${nodeKey}:${tag}:blind_factor`);
+  let D_i = await db.get(`${nodeKey}:${tag}:g_gamma_i`);
+  let D_i_blind = await db.get(`${nodeKey}:${tag}:blind_factor`);
   await Promise.all([
-    serverBroadcast(endpoints, `node-${index}:${tag}:D_i_and_blind`, JSON.stringify({D_i, D_i_blind})),
+    serverBroadcast(
+      endpoints,
+      `node-${index}:${tag}:D_i_and_blind`,
+      JSON.stringify({ D_i, D_i_blind })
+    ),
   ]);
   res.sendStatus(200);
 });
@@ -292,13 +272,17 @@ app.post("/round_4_Di_verify", async (req, res) => {
   for (let i = 0; i < parties.length; i++) {
     let party = parties[i];
     // note: these are length of n, other arrays are length n - 1
-    g_gamma_is.push(db.get(`node-${party}:${tag}:D_i_and_blind`).then(d => {
-      return JSON.parse(d).D_i
-    }));
+    g_gamma_is.push(
+      db.get(`node-${party}:${tag}:D_i_and_blind`).then((d) => {
+        return JSON.parse(d).D_i;
+      })
+    );
     coms.push(db.get(`node-${party}:${tag}:com`));
-    blind_factors.push(db.get(`node-${party}:${tag}:D_i_and_blind`).then(d => {
-      return JSON.parse(d).D_i_blind
-    }));
+    blind_factors.push(
+      db.get(`node-${party}:${tag}:D_i_and_blind`).then((d) => {
+        return JSON.parse(d).D_i_blind;
+      })
+    );
     if (party === index) {
       continue;
     }
