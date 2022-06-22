@@ -1,11 +1,13 @@
 var { spawn } = require("child_process");
 let base_port = 8000;
+let base_ws_port = 18000;
 
 (async () => {
   for (let i = 1; i <= 6; i++) {
     let tssServer = spawn("node", [
-      "./index.js",
-      `${base_port + i}`
+      "./server.js",
+      `${base_port + i}`,
+      `${base_ws_port + i}`
     ]);
     tssServer.on(
       "exit",

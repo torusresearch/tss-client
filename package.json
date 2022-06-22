@@ -18,7 +18,10 @@
     "elliptic": "^6.5.4",
     "express": "^4.18.1",
     "keccak256": "^1.0.6",
+    "random-id": "^1.0.4",
     "sequelize": "^6.20.1",
+    "socket.io": "^4.5.1",
+    "socket.io-client": "^4.5.1",
     "sqlite3": "^5.0.8",
     "threads": "^1.7.0",
     "tss-lib": "file:../tss-lib/pkg"

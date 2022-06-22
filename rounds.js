@@ -676,8 +676,45 @@ function allTrue(obj) {
   return true;
 }
 
+
+function getRound(key) {
+  let segments = key.split(":")
+  if (key.indexOf("start") !== -1) {
+    return "round_1_commitment_broadcast"
+  }
+  if (segments[segments.length - 1] === "com") {
+    return "round_1_commitment_received"
+  }
+  if (segments[segments.length - 1] === "m_a") {
+    return "round_2_MessageA_received"
+  }
+  if (segments[segments.length - 1] === "m_b_gamma") {
+    return "round_2_MessageBs_gamma_received"
+  }
+  if (segments[segments.length - 1] === "m_b_w") {
+    return "round_2_MessageBs_w_received"
+  }
+  if (segments[segments.length - 1] === "delta") {
+    return "round_3_Delta_received"
+  }
+  if (segments[segments.length - 1] === "D_i_and_blind") {
+    return "round_4_Di_received"
+  }
+  if (segments[segments.length - 1] === "proof_pdl") {
+    return "round_5_proof_pdl_received"
+  }
+  if (segments[segments.length - 1] === "R_k_i") {
+    return "round_5_Rki_received"
+  }
+  if (segments[segments.length - 1] === "S_i") {
+    return "round_6_Rsigmai_received"
+  }
+  throw new Error(`could not identify round name ${JSON.stringify(arguments)}`)
+}
+
 module.exports = {
   createRoundTracker,
   getTagInfo,
   roundRunner,
+  getRound
 };

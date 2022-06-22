@@ -1,41 +1,14 @@
-import init, {
-  generate_keys,
-  random_bigint,
-  generator,
-  scalar_mul,
-  coords_to_pt,
-  phase_1_broadcast,
-  message_A,
-  message_Bs,
-  message_Alphas,
-  phase_3_deltaInv,
-  get_b_proof,
-  phase_4_Di_verify,
-  phase_5_Rki,
-  phase_5_verify,
-  phase_6_Rsigmai,
-  phase_6_verify,
-  phase_7_sign,
-  get_signature,
-} from "./pkg/tss_lib.js";
-window.init = init;
-window.tss = {
-  generate_keys,
-  random_bigint,
-  generator,
-  scalar_mul,
-  coords_to_pt,
-  phase_1_broadcast,
-  message_A,
-  message_Bs,
-  message_Alphas,
-  phase_3_deltaInv,
-  get_b_proof,
-  phase_4_Di_verify,
-  phase_5_Rki,
-  phase_5_verify,
-  phase_6_Rsigmai,
-  phase_6_verify,
-  phase_7_sign,
-  get_signature,
+var sock = new SockJS('http://localhost:8001/ws');
+sock.onopen = function() {
+    console.log('open');
+    sock.send('test');
+};
+
+sock.onmessage = function(e) {
+    console.log('message', e.data);
+    sock.close();
+};
+
+sock.onclose = function() {
+    console.log('close');
 };
