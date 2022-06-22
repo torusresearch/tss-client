@@ -12,7 +12,7 @@ var base_port = 8000;
 var endpoint_prefix = "http://localhost:";
 var msg = "hello world";
 var msgHash = keccak256(msg);
-var tag = "test";
+var tag = "test" + Date.now();
 var parties = [];
 let endpoints = [];
 
@@ -107,7 +107,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     await Promise.all(awaiting);
 
     // round 1
-    console.log("round 1", Date.now() - now);
+    console.log("start", Date.now() - now);
     await Promise.all(
       endpoints.map((endpoint) =>
         axios.post(`${endpoint}/start`, {
@@ -119,14 +119,14 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     let online_phase = Date.now() - now;
     console.log(`TODO: FIX THIS Time taken for online phase: ${online_phase / 1e3} seconds`);
 
-    await new Promise(r => setTimeout(r, 20000))
+    await new Promise(r => setTimeout(r, 60000))
 
     // round 7
-    console.log("round 7");
+    console.log("sign");
     let s_is = await Promise.all(
       endpoints.map((endpoint) =>
         axios
-          .post(`${endpoint}/round_7`, {
+          .post(`${endpoint}/sign`, {
             tag,
             msg_hash: new BN(msgHash).toString("hex"),
           })

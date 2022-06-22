@@ -140,7 +140,7 @@ async function roundRunner(
   nodeKey,
   db,
   tag,
-  roundName,
+  roundName, 
   party,
   serverSend,
   serverBroadcast
@@ -175,6 +175,9 @@ async function roundRunner(
     }
 
     let roundTracker = JSON.parse(await db.get(`tag-${tag}:rounds`));
+    if (roundTracker === undefined) {
+      throw new Error("could not get roundTracker")
+    }
     let { parties, endpoints, eks, h1h2Ntildes, gwis, pubkey } = await getTagInfo(
       db,
       tag
@@ -283,8 +286,6 @@ async function roundRunner(
       }
       roundTracker.round_2_MessageBs_gamma_sent[party] = true;
       roundTracker.round_2_MessageBs_w_sent[party] = true;
-      await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
-      release();
       // run round 2 message Bs sending here for party
       let gamma_i = await db.get(`${nodeKey}:${tag}:gamma_i`);
       let w_i = await db.get(`tag-${tag}:share`);
@@ -328,6 +329,8 @@ async function roundRunner(
           ),
         ]);
       });
+      await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
+      release();
       return;
     } else if (
       roundName === "round_2_MessageBs_gamma_received" ||
@@ -665,6 +668,8 @@ function checkKeys(roundTracker, n) {
 }
 
 function allTrue(obj) {
+  if (typeof obj !== "object") return false;
+  if (obj === null || obj === undefined) return false;
   for (let key in obj) {
     if (obj[key] !== true) return false;
   }

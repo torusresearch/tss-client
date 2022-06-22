@@ -7,12 +7,11 @@ let base_port = 8000;
       "./index.js",
       `${base_port + i}`
     ]);
-    if (i !== 1) continue
-    tssServer.stdout.on(
-      "data",
+    tssServer.on(
+      "exit",
       (function (index) {
-        return (data) => {
-          console.log(`server ${index} stdout:`, data.toString());
+        return (code) => {
+          console.log(`server ${index} exited with code ${code}`);
         };
       })(i)
     );
@@ -24,11 +23,11 @@ let base_port = 8000;
         };
       })(i)
     );
-    tssServer.on(
-      "exit",
+    tssServer.stdout.on(
+      "data",
       (function (index) {
-        return (code) => {
-          console.log(`server ${index} exited with code ${code}`);
+        return (data) => {
+          console.log(`server ${index} stdout:`, data.toString());
         };
       })(i)
     );

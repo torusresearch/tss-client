@@ -11,9 +11,8 @@ const { createRoundTracker, getTagInfo, roundRunner } = require("./rounds");
 const { work, workerNum } = require("./work");
 const tss = require("tss-lib");
 
-const db = require("./fs_db")(`${port}`);
+const db = require("./mem_db")(`${port}`);
 const { serverBroadcast, serverSend } = require("./comm");
-
 
 function getRound(key) {
   let segments = key.split(":")
@@ -51,7 +50,6 @@ function getRound(key) {
 }
 
 app.post("/broadcast", async (req, res) => {
-  console.log("RECEIVED BROADCAST", JSON.stringify(req.body))
   const { tag, key, value, sender } = req.body;
   await db.set(key, value);
   res.sendStatus(200);
@@ -60,7 +58,6 @@ app.post("/broadcast", async (req, res) => {
 });
 
 app.post("/send", async (req, res) => {
-  console.log("RECEIVED SEND", JSON.stringify(req.body))
   const { tag, key, value, sender } = req.body;
   await db.set(key, value);
   res.sendStatus(200);
