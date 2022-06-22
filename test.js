@@ -119,7 +119,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     let online_phase = Date.now() - now;
     console.log(`TODO: FIX THIS Time taken for online phase: ${online_phase / 1e3} seconds`);
 
-    await new Promise(r => setTimeout(r, 60000))
+    await new Promise(r => setTimeout(r, 20000))
 
     // round 7
     console.log("sign");

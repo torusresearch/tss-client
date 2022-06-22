@@ -16,9 +16,9 @@ module.exports = function (wsPort) {
   return {
     wsSend: async function (self, tag, id, key, value) {
       const socket = connections[id];
-      const id = randomId();
+      const messageId = randomId();
       socket.emit("send", {
-        id,
+        messageId,
         sender: self,
         tag,
         key,
@@ -28,9 +28,9 @@ module.exports = function (wsPort) {
     },
     wsBroadcast: async function (self, tag, id, key, value) {
       const socket = connections[id];
-      const id = randomId();
+      const messageId = randomId();
       socket.emit("broadcast", {
-        id,
+        messageId,
         sender: self,
         tag,
         key,
