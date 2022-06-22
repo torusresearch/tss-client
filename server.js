@@ -1,4 +1,3 @@
-const axios = require("axios");
 const express = require("express");
 const app = express();
 app.use(express.json());
@@ -23,6 +22,18 @@ const db = require("./mem_db")(`${port}`);
 const { wsSend, wsBroadcast } = require("./socket.js");
 const { serverBroadcast, serverSend } = require("./comm")(wsSend, wsBroadcast);
 
+app.post("/registerWSEndpoint", async (req, res) => {
+  const { websocketId, tag, endpointName } = req.body
+  await db.set(`tag-${tag}:name-${endpointName}:ws`, websocketId)
+  res.sendStatus(200)
+})
+
+app.post("/subscribeReady", async (req, res) => {
+  const { websocketId, tag } = req.body;
+  await db.set(`tag-${tag}:ready`, websocketId)
+  res.sendStatus(200)
+})
+
 app.post("/broadcast", async (req, res) => {
   const { tag, key, value, sender } = req.body;
   console.log("broadcast received", key, value, sender);
@@ -40,12 +51,6 @@ app.post("/send", async (req, res) => {
   const roundName = getRound(key);
   roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast);
 });
-
-app.post("/subscribeReady", async (req, res) => {
-  const { websocketId, tag } = req.body;
-  await db.set(`tag-${tag}:ready`, websocketId)
-  res.sendStatus(200)
-})
 
 app.post("/start", async (req, res) => {
   const { tag } = req.body;
