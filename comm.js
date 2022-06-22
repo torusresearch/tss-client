@@ -1,7 +1,7 @@
 const axios = require("axios");
 const getWebSocketID = (websocketEndpoint) => {
-  return websocketEndpoint.split(":")[1]
-}
+  return websocketEndpoint.split(":")[1];
+};
 
 module.exports = function (wsSend, wsBroadcast) {
   return {
@@ -9,22 +9,21 @@ module.exports = function (wsSend, wsBroadcast) {
       return Promise.all(
         endpoints.map((endpoint) => {
           if (endpoint.indexOf("websocket") !== -1) {
-            return wsBroadcast(self, tag, getWebSocketID(endpoint), key, value)
+            return wsBroadcast(self, tag, getWebSocketID(endpoint), key, value);
           } else {
             return axios.post(`${endpoint}/broadcast`, {
               sender: self,
               tag,
               key,
               value,
-            })
+            });
           }
-        }
-        )
+        })
       );
     },
     serverSend: async (self, tag, endpoint, key, value) => {
       if (endpoint.indexOf("websocket") !== -1) {
-        return wsSend(self, tag, getWebSocketID(endpoint), key, value)
+        return wsSend(self, tag, getWebSocketID(endpoint), key, value);
       } else {
         return axios.post(`${endpoint}/send`, {
           sender: self,
