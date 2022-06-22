@@ -9,7 +9,7 @@ const nodeKey = port;
 if (!port) {
   throw new Error("port not specified");
 }
-const { getTagInfo, roundRunner, getRound } = require("./rounds");
+const { roundRunner, getRound } = require("./rounds");
 const {
   generateNodeInfo,
   setShare,
@@ -19,7 +19,6 @@ const {
   tssSign,
   getSignature,
 } = require("./methods");
-const { get_signature } = require("tss-lib");
 
 const db = require("./mem_db")(`${port}`);
 const { wsSend, wsBroadcast } = require("./socket.js")(wsPort);
