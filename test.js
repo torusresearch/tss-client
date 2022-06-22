@@ -6,21 +6,44 @@ var axios = require("axios");
 var BN = require("bn.js");
 const { assert } = require("elliptic/lib/elliptic/utils");
 
+const { io } = require("socket.io-client");
+
 // let onlinephasestart = process.hrtime();
 
 var base_port = 8000;
+var base_ws_port = 18000;
 var endpoint_prefix = "http://localhost:";
+var ws_prefix = "ws://localhost:";
 var msg = "hello world";
 var msgHash = keccak256(msg);
 var tag = "test" + Date.now();
 var parties = [];
 let endpoints = [];
+let wsEndpoints = [];
 
 // generate parties and endpoints
 for (let i = 1; i <= 6; i++) {
   parties.push(i);
   endpoints.push(`${endpoint_prefix}${base_port + i}`);
+  wsEndpoints.push(`${ws_prefix}${base_ws_port + i}`);
 }
+
+let wsConnecting = [];
+let onlinePhaseComplete = Promise.all(
+  wsEndpoints.map((wsEndpoint) => {
+    const socket = io(wsEndpoint);
+    wsConnecting.push(
+      new Promise((resolve) => {
+        socket.on("connect", () => {
+          resolve(socket.id);
+        });
+      })
+    );
+    return new Promise((resolve) => {
+      socket.on("notify", resolve);
+    });
+  })
+);
 
 var privKey = new BN(eccrypto.generatePrivate());
 
@@ -41,7 +64,7 @@ var reduced = shares.reduce(
 assert.equal(reduced.toString(16), privKey.toString(16));
 (async () => {
   try {
-    
+    let wsIds = await Promise.all(wsConnecting);
     let now = Date.now();
 
     // get public params
@@ -106,6 +129,17 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     }
     await Promise.all(awaiting);
 
+    console.log("WSIDS", wsIds);
+
+    await Promise.all(
+      endpoints.map((endpoint, index) => {
+        axios.post(`${endpoint}/subscribeReady`, {
+          tag,
+          websocketId: wsIds[index],
+        });
+      })
+    );
+
     // round 1
     console.log("start", Date.now() - now);
     await Promise.all(
@@ -116,10 +150,10 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       )
     );
 
-    let online_phase = Date.now() - now;
-    console.log(`TODO: FIX THIS Time taken for online phase: ${online_phase / 1e3} seconds`);
+    await onlinePhaseComplete;
 
-    await new Promise(r => setTimeout(r, 20000))
+    let online_phase = Date.now() - now;
+    console.log(`Time taken for online phase: ${online_phase / 1e3} seconds`);
 
     // round 7
     console.log("sign");

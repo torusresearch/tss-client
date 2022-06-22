@@ -5,6 +5,7 @@ const getTagInfo = async function (db, tag) {
 
 const { work, workerNum } = require("./work");
 const tss = require("tss-lib");
+const { wsNotify } = require("./socket");
 
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
@@ -638,6 +639,15 @@ async function roundRunner(
         roundTracker.round_6_Rsigmai_verified = true;
         await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
         release();
+
+        // notify subscriber that online phase is complete
+        const subscribeReady = await db.get(`tag-${tag}:ready`)
+        if (subscribeReady) {
+          await wsNotify(index, tag, subscribeReady, "online_phase", "complete")
+        } else {
+          console.log("no work", index, tag, subscribeReady)
+          throw new Error("WHYYYYYYY")
+        }
       }
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();

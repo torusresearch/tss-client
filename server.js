@@ -4,7 +4,6 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 const port = process.argv[2];
-const wsPort = process.argv[3];
 const nodeKey = port;
 if (!port) {
   throw new Error("port not specified");
@@ -21,7 +20,7 @@ const {
 } = require("./methods");
 
 const db = require("./mem_db")(`${port}`);
-const { wsSend, wsBroadcast } = require("./socket.js")(wsPort);
+const { wsSend, wsBroadcast } = require("./socket.js");
 const { serverBroadcast, serverSend } = require("./comm")(wsSend, wsBroadcast);
 
 app.post("/broadcast", async (req, res) => {
@@ -41,6 +40,12 @@ app.post("/send", async (req, res) => {
   const roundName = getRound(key);
   roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast);
 });
+
+app.post("/subscribeReady", async (req, res) => {
+  const { websocketId, tag } = req.body;
+  await db.set(`tag-${tag}:ready`, websocketId)
+  res.sendStatus(200)
+})
 
 app.post("/start", async (req, res) => {
   const { tag } = req.body;
