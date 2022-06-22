@@ -18,7 +18,7 @@ module.exports = {
     const socket = connections[webSocketId];
     const messageId = randomId();
     console.log("notify message via websocket", {
-      socket,
+      webSocketId,
       messageId,
       sender: self,
       tag,
@@ -32,14 +32,12 @@ module.exports = {
       key,
       value,
     });
-    await new Promise((r) => (receivedTracker[webSocketId] = r));
-    console.log(`messageId ${messageId} received for notify`);
   },
   wsSend: async function (self, tag, webSocketId, key, value) {
     const socket = connections[webSocketId];
     const messageId = randomId();
     console.log("sending message via websocket", {
-      socket,
+      webSocketId,
       messageId,
       sender: self,
       tag,
@@ -60,7 +58,7 @@ module.exports = {
     const socket = connections[webSocketId];
     const messageId = randomId();
     console.log("broadcasting message via websocket", {
-      socket,
+      webSocketId,
       messageId,
       sender: self,
       tag,

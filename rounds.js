@@ -644,9 +644,6 @@ async function roundRunner(
         const subscribeReady = await db.get(`tag-${tag}:ready`)
         if (subscribeReady) {
           await wsNotify(index, tag, subscribeReady, "online_phase", "complete")
-        } else {
-          console.log("no work", index, tag, subscribeReady)
-          throw new Error("WHYYYYYYY")
         }
       }
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));

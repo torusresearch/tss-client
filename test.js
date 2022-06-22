@@ -21,8 +21,10 @@ var parties = [];
 let endpoints = [];
 let wsEndpoints = [];
 
+let n = process.argv[2] ? parseInt(process.argv[2]) : 6
+
 // generate parties and endpoints
-for (let i = 1; i <= 6; i++) {
+for (let i = 1; i <= n; i++) {
   parties.push(i);
   endpoints.push(`${endpoint_prefix}${base_port + i}`);
   wsEndpoints.push(`${ws_prefix}${base_ws_port + i}`);
@@ -50,7 +52,7 @@ var privKey = new BN(eccrypto.generatePrivate());
 // generate 6-out-of-6 key sharing
 var shares = [];
 var shareSum = new BN(0);
-for (let i = 0; i < 5; i++) {
+for (let i = 0; i < n - 1; i++) {
   let share = new BN(eccrypto.generatePrivate());
   shares.push(share);
   shareSum = shareSum.add(share);
@@ -81,7 +83,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     // write shares to each node
     console.log("generating shares", Date.now() - now);
     var awaiting = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < n; i++) {
       let share = shares[i];
       awaiting.push(
         axios
@@ -109,7 +111,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     console.log("publish tag info", Date.now() - now);
     awaiting = [];
     var pubkey = ec.curve.g.mul(privKey);
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < n; i++) {
       let endpoint = endpoints[i];
       awaiting.push(
         axios.post(`${endpoint}/set_tag_info/${tag}`, {
