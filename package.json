@@ -18,6 +18,7 @@
     "elliptic": "^6.5.4",
     "express": "^4.18.1",
     "keccak256": "^1.0.6",
+    "mock-local-storage": "^1.1.23",
     "random-id": "^1.0.4",
     "sequelize": "^6.20.1",
     "socket.io": "^4.5.1",

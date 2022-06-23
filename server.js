@@ -20,7 +20,7 @@ const {
 
 const db = require("./mem_db")(`${port}`);
 const { wsSend, wsBroadcast } = require("./socket.js");
-const { serverBroadcast, serverSend } = require("./comm")(wsSend, wsBroadcast);
+const { serverBroadcast, serverSend } = require("./comm")(wsSend, wsBroadcast, null);
 
 app.post("/registerWSEndpoint", async (req, res) => {
   const { websocketId, tag, endpointName } = req.body

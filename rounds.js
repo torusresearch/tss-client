@@ -211,6 +211,7 @@ async function roundRunner(
         ]);
         await serverBroadcast(
           index,
+          parties,
           tag,
           endpoints,
           `node-${index}:${tag}:com`,
@@ -405,6 +406,7 @@ async function roundRunner(
         release();
         await serverBroadcast(
           index,
+          parties,
           tag,
           endpoints,
           `node-${index}:${tag}:delta`,
@@ -438,6 +440,7 @@ async function roundRunner(
         let D_i_blind = await db.get(`${nodeKey}:${tag}:blind_factor`);
         await serverBroadcast(
           index,
+          parties,
           tag,
           endpoints,
           `node-${index}:${tag}:D_i_and_blind`,
@@ -552,6 +555,7 @@ async function roundRunner(
         }
         await serverBroadcast(
           index,
+          parties,
           tag,
           endpoints,
           `node-${index}:${tag}:R_k_i`,
@@ -613,6 +617,7 @@ async function roundRunner(
         let Rsigmai = tss.phase_6_Rsigmai(R, sigma_i);
         await serverBroadcast(
           index,
+          parties,
           tag,
           endpoints,
           `node-${index}:${tag}:S_i`,

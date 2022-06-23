@@ -8,8 +8,8 @@ console.log(`websocket on port ${wsPort}`);
 io.on("connection", (socket) => {
   connections[socket.id] = socket;
   socket.on("received", (arg) => {
-    if (arg.id && typeof receivedTracker[arg.id] === "function") {
-      receivedTracker[arg.id]();
+    if (arg.messageId && typeof receivedTracker[arg.messageId] === "function") {
+      receivedTracker[arg.messageId]();
     }
   });
 });
