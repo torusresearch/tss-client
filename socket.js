@@ -39,10 +39,10 @@ module.exports = {
     console.log("sending message via websocket", {
       webSocketId,
       messageId,
-      sender: self,
-      tag,
-      key,
-      value,
+      // sender: self,
+      // tag,
+      // key,
+      // value,
     });
     socket.emit("send", {
       messageId,
@@ -51,7 +51,7 @@ module.exports = {
       key,
       value,
     });
-    await new Promise((r) => (receivedTracker[webSocketId] = r));
+    await new Promise((r) => (receivedTracker[messageId] = r));
     console.log(`messageId ${messageId} received for send`);
   },
   wsBroadcast: async function (self, tag, webSocketId, key, value) {
@@ -60,10 +60,10 @@ module.exports = {
     console.log("broadcasting message via websocket", {
       webSocketId,
       messageId,
-      sender: self,
-      tag,
-      key,
-      value,
+      // sender: self,
+      // tag,
+      // key,
+      // value,
     });
     socket.emit("broadcast", {
       messageId,

@@ -9,10 +9,10 @@ module.exports = function (wsSend, wsBroadcast, selfReceiveBroadcast) {
       return Promise.all(
         endpoints.map((endpoint, i) => {
           if (endpoint.indexOf("websocket") !== -1) {
-            if (self !== parties[i]) {
+            if (self.toString() !== parties[i].toString()) {
               return wsBroadcast(self, tag, getWebSocketID(endpoint), key, value);
             } else {
-              return selfReceiveBroadcast(sender, tag, key, value)
+              return selfReceiveBroadcast[tag](self, tag, key, value)
             }
           } else {
             return axios.post(`${endpoint}/broadcast`, {

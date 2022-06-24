@@ -1,5 +1,6 @@
 const { roundRunner, getRound } = require("./rounds");
 require("mock-local-storage");
+let { tssSign } = require('./methods')
 const localStorageDB = {
   get: (key) =>
     new Promise((r) => {
@@ -25,19 +26,18 @@ class Client {
     this.index = index;
     this.parties = parties;
     this.sockets = sockets;
-    this.wsIds = wsIds;
     this.nodeKey = "client";
     let resolve;
     this.ready = new Promise((r) => (resolve = r));
     this.readyResolve = resolve;
-    selfReceiveBroadcast[this.tag] = async function (sender, tag, key, value) {
-      if (sender !== this.index)
+    selfReceiveBroadcast[this.tag] = async (sender, tag, key, value) => {
+      if (sender.toString() !== this.index.toString())
         throw new Error("self receive broadcast must be from self");
       await localStorageDB.set(key, value);
       const roundName = getRound(key);
       roundRunner({
         nodeKey: this.nodeKey,
-        db: this.db,
+        db: localStorageDB,
         tag,
         roundName,
         party: sender,
@@ -84,18 +84,22 @@ class Client {
       });
     });
   }
-  async start(tag) {
+  async start() {
     const roundName = getRound("start");
     roundRunner({
       nodeKey: this.nodeKey,
       db: localStorageDB,
-      tag,
+      tag: this.tag,
       roundName,
       party: undefined,
       serverSend,
       serverBroadcast,
       clientReadyResolve: this.readyResolve,
     });
+  }
+  async sign(msg_hash) {
+    let { s_i, local_sig } = await tssSign(localStorageDB, this.nodeKey, this.tag, msg_hash);
+    return { s_i }
   }
 }
 

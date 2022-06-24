@@ -184,7 +184,7 @@ async function roundRunner({
     }
     let { parties, endpoints, eks, h1h2Ntildes, gwis, pubkey } =
       await getTagInfo(db, tag);
-    let index = await db.get(`${nodeKey}:index`);
+    let index = parseInt(await db.get(`${nodeKey}:index`));
 
     if (!checkKeys(roundTracker, parties.length)) {
       throw new Error(
@@ -223,7 +223,7 @@ async function roundRunner({
       throw new Error("round 1 commitment broadcast has already been sent");
     } else if (roundName === "round_1_commitment_received") {
       if (party === undefined) {
-        console.log("WHATTTT arguments", JSON.stringify(arguments))
+        console.log("WHATTTT arguments", JSON.stringify(arguments));
         throw new Error("round 1 commitment received from unknown");
       }
       roundTracker.round_1_commitment_received[party] = true;
@@ -299,6 +299,7 @@ async function roundRunner({
       let endpoint = endpoints[i];
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
+
       await work(workerNum(), "message_Bs", [
         gamma_i,
         w_i,

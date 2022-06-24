@@ -3,7 +3,7 @@ const { createRoundTracker, getTagInfo } = require("./rounds");
 
 module.exports = {
   generateNodeInfo: async (db, nodeKey, index) => {
-    let [keys, ek, h1h2Ntilde] = tss.generate_keys(parseInt(req.params.index));
+    let [keys, ek, h1h2Ntilde] = tss.generate_keys(parseInt(index));
 
     // TODO: let node generate own pubkey for identity?
     // let privkey = tss.random_bigint();
@@ -13,7 +13,7 @@ module.exports = {
     await Promise.all([
       // db.set(`${nodeKey}:node_privkey`, privkey),
       // db.set(`${nodeKey}:node_pubkey`, pubkey),
-      db.set(`${nodeKey}:index`, parseInt(index)),
+      db.set(`${nodeKey}:index`, index.toString()),
       db.set(`${nodeKey}:keys`, keys),
       db.set(`${nodeKey}:ek`, ek),
       db.set(`${nodeKey}:h1h2Ntilde`, h1h2Ntilde),
@@ -56,7 +56,7 @@ module.exports = {
         h1h2Ntildes,
       })
     );
-    let index = await db.get(`${nodeKey}:index`);
+    let index = parseInt(await db.get(`${nodeKey}:index`));
     await db.set(
       `tag-${tag}:rounds`,
       JSON.stringify(createRoundTracker(parties, index))

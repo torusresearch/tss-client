@@ -40,7 +40,7 @@ app.post("/subscribeReady", async (req, res) => {
 
 app.post("/broadcast", async (req, res) => {
   const { tag, key, value, sender } = req.body;
-  console.log("broadcast received", key, value, sender);
+  // console.log("broadcast received", key, value, sender);
   await db.set(key, value);
   res.sendStatus(200);
   const roundName = getRound(key);
@@ -58,7 +58,7 @@ app.post("/broadcast", async (req, res) => {
 
 app.post("/send", async (req, res) => {
   const { tag, key, value, sender } = req.body;
-  console.log("send received", key, value, sender);
+  // console.log("send received", key, value, sender);
   await db.set(key, value);
   res.sendStatus(200);
   const roundName = getRound(key);
@@ -141,6 +141,7 @@ app.post("/sign", async (req, res) => {
 
 app.post("/get_signature", async (req, res) => {
   let { s_is, tag, msg_hash } = req.body;
+  console.log("getting signature", {s_is, msg_hash})
   let sig = await getSignature(db, nodeKey, tag, s_is, msg_hash);
   res.send({ sig });
 });
