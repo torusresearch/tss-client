@@ -5,7 +5,6 @@ const getTagInfo = async function (db, tag) {
 
 const { work, workerNum } = require("./work");
 const tss = require("tss-lib");
-const { wsNotify } = require("./socket");
 
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
@@ -137,15 +136,17 @@ const roundTrackerLocks = {};
 
 // the purpose of roundRunner is to prevent duplicate messages from being sent
 // it does not prevent duplicate messages from being received
-async function roundRunner(
+async function roundRunner({
   nodeKey,
   db,
   tag,
-  roundName, 
+  roundName,
   party,
   serverSend,
-  serverBroadcast
-) {
+  serverBroadcast,
+  wsNotify = () => {},
+  clientReadyResolve = null,
+}) {
   let release;
   try {
     if (db === undefined || tag === undefined || roundName === undefined) {
@@ -164,25 +165,25 @@ async function roundRunner(
     } else {
       // wait to acquire lock
       await roundTrackerLocks[tag];
-      return roundRunner(
+      return roundRunner({
         nodeKey,
         db,
         tag,
         roundName,
         party,
         serverSend,
-        serverBroadcast
-      );
+        serverBroadcast,
+        wsNotify,
+        clientReadyResolve,
+      });
     }
 
     let roundTracker = JSON.parse(await db.get(`tag-${tag}:rounds`));
     if (roundTracker === undefined) {
-      throw new Error("could not get roundTracker")
+      throw new Error("could not get roundTracker");
     }
-    let { parties, endpoints, eks, h1h2Ntildes, gwis, pubkey } = await getTagInfo(
-      db,
-      tag
-    );
+    let { parties, endpoints, eks, h1h2Ntildes, gwis, pubkey } =
+      await getTagInfo(db, tag);
     let index = await db.get(`${nodeKey}:index`);
 
     if (!checkKeys(roundTracker, parties.length)) {
@@ -221,8 +222,10 @@ async function roundRunner(
       }
       throw new Error("round 1 commitment broadcast has already been sent");
     } else if (roundName === "round_1_commitment_received") {
-      if (party === undefined)
+      if (party === undefined) {
+        console.log("WHATTTT arguments", JSON.stringify(arguments))
         throw new Error("round 1 commitment received from unknown");
+      }
       roundTracker.round_1_commitment_received[party] = true;
       // check if all commitments have been received
       if (allTrue(roundTracker.round_1_commitment_received)) {
@@ -532,12 +535,12 @@ async function roundRunner(
           parties
         );
         let Rki = proofs.shift();
-        
+
         for (let i = 0, passedIndex = false; i < parties.length; i++) {
           let p = parties[i].toString();
           if (p === index.toString()) {
             passedIndex = true;
-            continue; 
+            continue;
           }
           let ind = !passedIndex ? i : i - 1;
           let endpoint = endpoints[i];
@@ -644,11 +647,23 @@ async function roundRunner(
         roundTracker.round_6_Rsigmai_verified = true;
         await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
         release();
+        if (
+          clientReadyResolve !== null &&
+          typeof clientReadyResolve === "function"
+        ) {
+          clientReadyResolve();
+        }
 
         // notify subscriber that online phase is complete
-        const subscribeReady = await db.get(`tag-${tag}:ready`)
+        const subscribeReady = await db.get(`tag-${tag}:ready`);
         if (subscribeReady) {
-          await wsNotify(index, tag, subscribeReady, "online_phase", "complete")
+          await wsNotify(
+            index,
+            tag,
+            subscribeReady,
+            "online_phase",
+            "complete"
+          );
         }
       }
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
@@ -688,45 +703,44 @@ function allTrue(obj) {
   return true;
 }
 
-
 function getRound(key) {
-  let segments = key.split(":")
+  let segments = key.split(":");
   if (key.indexOf("start") !== -1) {
-    return "round_1_commitment_broadcast"
+    return "round_1_commitment_broadcast";
   }
   if (segments[segments.length - 1] === "com") {
-    return "round_1_commitment_received"
+    return "round_1_commitment_received";
   }
   if (segments[segments.length - 1] === "m_a") {
-    return "round_2_MessageA_received"
+    return "round_2_MessageA_received";
   }
   if (segments[segments.length - 1] === "m_b_gamma") {
-    return "round_2_MessageBs_gamma_received"
+    return "round_2_MessageBs_gamma_received";
   }
   if (segments[segments.length - 1] === "m_b_w") {
-    return "round_2_MessageBs_w_received"
+    return "round_2_MessageBs_w_received";
   }
   if (segments[segments.length - 1] === "delta") {
-    return "round_3_Delta_received"
+    return "round_3_Delta_received";
   }
   if (segments[segments.length - 1] === "D_i_and_blind") {
-    return "round_4_Di_received"
+    return "round_4_Di_received";
   }
   if (segments[segments.length - 1] === "proof_pdl") {
-    return "round_5_proof_pdl_received"
+    return "round_5_proof_pdl_received";
   }
   if (segments[segments.length - 1] === "R_k_i") {
-    return "round_5_Rki_received"
+    return "round_5_Rki_received";
   }
   if (segments[segments.length - 1] === "S_i") {
-    return "round_6_Rsigmai_received"
+    return "round_6_Rsigmai_received";
   }
-  throw new Error(`could not identify round name ${JSON.stringify(arguments)}`)
+  throw new Error(`could not identify round name ${JSON.stringify(arguments)}`);
 }
 
 module.exports = {
   createRoundTracker,
   getTagInfo,
   roundRunner,
-  getRound
+  getRound,
 };

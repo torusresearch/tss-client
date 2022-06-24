@@ -7,6 +7,8 @@ var BN = require("bn.js");
 const { assert } = require("elliptic/lib/elliptic/utils");
 
 const { io } = require("socket.io-client");
+const { Client, localStorageDB } = require("./client");
+const { setShare, getGwi, setTagInfo } = require("./methods");
 
 // let onlinephasestart = process.hrtime();
 
@@ -20,8 +22,11 @@ var tag = "test" + Date.now();
 var parties = [];
 let endpoints = [];
 let wsEndpoints = [];
+let sockets = [];
+const useClient = false;
+let client;
 
-let n = process.argv[2] ? parseInt(process.argv[2]) : 6
+let n = process.argv[2] ? parseInt(process.argv[2]) : 6;
 
 // generate parties and endpoints
 for (let i = 1; i <= n; i++) {
@@ -31,9 +36,12 @@ for (let i = 1; i <= n; i++) {
 }
 
 let wsConnecting = [];
-let onlinePhaseComplete = Promise.all(
+
+// initialize websocket connections, store sockets, setup notify
+let onlinePhaseCompleteForServers = Promise.all(
   wsEndpoints.map((wsEndpoint) => {
     const socket = io(wsEndpoint);
+    sockets.push(socket);
     wsConnecting.push(
       new Promise((resolve) => {
         socket.on("connect", () => {
@@ -49,42 +57,54 @@ let onlinePhaseComplete = Promise.all(
 
 var privKey = new BN(eccrypto.generatePrivate());
 
-// generate 6-out-of-6 key sharing
+// generate n-out-of-n key sharing
 var shares = [];
 var shareSum = new BN(0);
-for (let i = 0; i < n - 1; i++) {
+for (let i = 0; i < (useClient ? n - 1 : n); i++) {
   let share = new BN(eccrypto.generatePrivate());
   shares.push(share);
   shareSum = shareSum.add(share);
 }
+
 var finalShare = privKey.sub(shareSum.umod(ec.curve.n)).umod(ec.curve.n);
 shares.push(finalShare);
 var reduced = shares.reduce(
   (acc, share) => acc.add(share).umod(ec.curve.n),
   new BN(0)
 );
+
 assert.equal(reduced.toString(16), privKey.toString(16));
 (async () => {
   try {
     let wsIds = await Promise.all(wsConnecting);
     let now = Date.now();
 
+    if (useClient) {
+      await generateNodeInfo(localStorageDB, "client", n + 1);
+      client = new Client(tag, n + 1, parties, sockets);
+    }
+
     // get public params
     console.log("getting public params", Date.now() - now);
     awaiting = [];
-    let publicParams = await Promise.all(
-      endpoints.map((endpoint) => {
-        return axios
-          .get(`${endpoint}/get_public_params`)
-          .then((res) => res.data);
-      })
-    );
+    let publicParamsAwaiting = endpoints.map((endpoint) => {
+      return axios.get(`${endpoint}/get_public_params`).then((res) => res.data);
+    });
+    if (useClient) {
+      publicParamsAwaiting.push(getPublicParams(localStorageDB, "client"));
+    }
+    let publicParams = await Promise.all(publicParamsAwaiting);
 
     // write shares to each node
     console.log("generating shares", Date.now() - now);
     var awaiting = [];
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < (useClient ? n : n + 1); i++) {
       let share = shares[i];
+      if (i == n) {
+        // useClient is true
+        await setShare(localStorageDB, tag, share.toString(16));
+        continue;
+      }
       awaiting.push(
         axios
           .post(`${endpoints[i]}/share`, {
@@ -98,14 +118,16 @@ assert.equal(reduced.toString(16), privKey.toString(16));
 
     // get share commitments
     console.log("getting gwis", Date.now() - now);
-    let gwis = await Promise.all(
-      endpoints.map((endpoint) =>
-        axios
-          .get(`${endpoint}/gwi/${tag}`)
-          .then((res) => res.data)
-          .then((obj) => obj.commitment)
-      )
+    let gwisAwaiting = endpoints.map((endpoint) =>
+      axios
+        .get(`${endpoint}/gwi/${tag}`)
+        .then((res) => res.data)
+        .then((obj) => obj.commitment)
     );
+    if (useClient) {
+      gwisAwaiting.push(getGwi(localStorageDB, tag));
+    }
+    let gwis = await Promise.all(gwisAwaiting);
 
     // publish tag info to each node
     console.log("publish tag info", Date.now() - now);
@@ -113,13 +135,18 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     var pubkey = ec.curve.g.mul(privKey);
     for (let i = 0; i < n; i++) {
       let endpoint = endpoints[i];
+      let customEndpoints = endpoints.slice()
+      if (useClient) {
+        customEndpoints.push(`websocket:${wsIds[i]}`)
+      }
+      
       awaiting.push(
         axios.post(`${endpoint}/set_tag_info/${tag}`, {
           pubkey: {
             X: pubkey.x.toString("hex"),
             Y: pubkey.y.toString("hex"),
           },
-          endpoints,
+          endpoints: customEndpoints,
           parties,
           gwis,
           eks: publicParams.map((publicParam) => publicParam.ek),
@@ -129,10 +156,28 @@ assert.equal(reduced.toString(16), privKey.toString(16));
         })
       );
     }
+    if (useClient) {
+      awaiting.push(() => {
+        let customEndpoints = endpoints.slice();
+        customEndpoints.push("websocket:?")
+        return setTagInfo(
+          localStorageDB,
+          "client",
+          tag,
+          pubkey,
+          customEndpoints,
+          parties,
+          gwis,
+          eks,
+          h1h2Ntildes
+        )
+    });
+    }
     await Promise.all(awaiting);
 
-    console.log("WSIDS", wsIds);
+    // console.log("WSIDS", wsIds);
 
+    // subscribe to when online phase is complete and servers are ready to sign
     await Promise.all(
       endpoints.map((endpoint, index) => {
         axios.post(`${endpoint}/subscribeReady`, {
@@ -144,6 +189,9 @@ assert.equal(reduced.toString(16), privKey.toString(16));
 
     // round 1
     console.log("start", Date.now() - now);
+    if (useClient) {
+      await client.start(tag);
+    }
     await Promise.all(
       endpoints.map((endpoint) =>
         axios.post(`${endpoint}/start`, {
@@ -152,7 +200,8 @@ assert.equal(reduced.toString(16), privKey.toString(16));
       )
     );
 
-    await onlinePhaseComplete;
+    await onlinePhaseCompleteForServers;
+    await client.ready;
 
     let online_phase = Date.now() - now;
     console.log(`Time taken for online phase: ${online_phase / 1e3} seconds`);

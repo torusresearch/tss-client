@@ -19,20 +19,24 @@ const {
 } = require("./methods");
 
 const db = require("./mem_db")(`${port}`);
-const { wsSend, wsBroadcast } = require("./socket.js");
-const { serverBroadcast, serverSend } = require("./comm")(wsSend, wsBroadcast, null);
+const { wsSend, wsBroadcast, wsNotify } = require("./socket.js");
+const { serverBroadcast, serverSend } = require("./comm")(
+  wsSend,
+  wsBroadcast,
+  null
+);
 
 app.post("/registerWSEndpoint", async (req, res) => {
-  const { websocketId, tag, endpointName } = req.body
-  await db.set(`tag-${tag}:name-${endpointName}:ws`, websocketId)
-  res.sendStatus(200)
-})
+  const { websocketId, tag, endpointName } = req.body;
+  await db.set(`tag-${tag}:name-${endpointName}:ws`, websocketId);
+  res.sendStatus(200);
+});
 
 app.post("/subscribeReady", async (req, res) => {
   const { websocketId, tag } = req.body;
-  await db.set(`tag-${tag}:ready`, websocketId)
-  res.sendStatus(200)
-})
+  await db.set(`tag-${tag}:ready`, websocketId);
+  res.sendStatus(200);
+});
 
 app.post("/broadcast", async (req, res) => {
   const { tag, key, value, sender } = req.body;
@@ -40,7 +44,16 @@ app.post("/broadcast", async (req, res) => {
   await db.set(key, value);
   res.sendStatus(200);
   const roundName = getRound(key);
-  roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast);
+  roundRunner({
+    nodeKey,
+    db,
+    tag,
+    roundName,
+    party: sender,
+    serverSend,
+    serverBroadcast,
+    wsNotify,
+  });
 });
 
 app.post("/send", async (req, res) => {
@@ -49,21 +62,31 @@ app.post("/send", async (req, res) => {
   await db.set(key, value);
   res.sendStatus(200);
   const roundName = getRound(key);
-  roundRunner(nodeKey, db, tag, roundName, sender, serverSend, serverBroadcast);
+  roundRunner({
+    nodeKey,
+    db,
+    tag,
+    roundName,
+    party: sender,
+    serverSend,
+    serverBroadcast,
+    wsNotify,
+  });
 });
 
 app.post("/start", async (req, res) => {
   const { tag } = req.body;
   const roundName = getRound("start");
-  await roundRunner(
+  await roundRunner({
     nodeKey,
     db,
     tag,
     roundName,
-    undefined,
+    party: undefined,
     serverSend,
-    serverBroadcast
-  );
+    serverBroadcast,
+    wsNotify,
+  });
   res.sendStatus(200);
 });
 
