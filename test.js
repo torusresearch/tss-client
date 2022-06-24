@@ -60,7 +60,7 @@ var privKey = new BN(eccrypto.generatePrivate());
 // generate n-out-of-n key sharing
 var shares = [];
 var shareSum = new BN(0);
-for (let i = 0; i < (useClient ? n - 1 : n); i++) {
+for (let i = 0; i < (useClient ? n : n - 1); i++) {
   let share = new BN(eccrypto.generatePrivate());
   shares.push(share);
   shareSum = shareSum.add(share);
@@ -98,7 +98,7 @@ assert.equal(reduced.toString(16), privKey.toString(16));
     // write shares to each node
     console.log("generating shares", Date.now() - now);
     var awaiting = [];
-    for (let i = 0; i < (useClient ? n : n + 1); i++) {
+    for (let i = 0; i < (useClient ? n + 1: n); i++) {
       let share = shares[i];
       if (i == n) {
         // useClient is true
