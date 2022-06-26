@@ -192,8 +192,6 @@ assert.equal(reduced.toString(16), privKey.toString(16));
 
     await Promise.all(awaiting);
 
-    // console.log("WSIDS", wsIds);
-
     // subscribe to when online phase is complete and servers are ready to sign
     await Promise.all(
       endpoints.map((endpoint, index) => {
@@ -203,8 +201,6 @@ assert.equal(reduced.toString(16), privKey.toString(16));
         });
       })
     );
-
-    console.log("WHAT IS LOCALSTORAGE", global.localStorage);
 
     // round 1
     console.log("start", Date.now() - now);

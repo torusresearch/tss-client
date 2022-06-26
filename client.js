@@ -1,6 +1,6 @@
 const { roundRunner, getRound } = require("./rounds");
 require("mock-local-storage");
-let { tssSign } = require('./methods')
+let { tssSign } = require("./methods");
 const localStorageDB = {
   get: (key) =>
     new Promise((r) => {
@@ -50,10 +50,10 @@ class Client {
     sockets.map((socket) => {
       socket.off("send");
       socket.off("broadcast");
-      socket.on("send", async (data) => {
-        let { messageId, sender, tag, key, value } = data;
+      socket.on("send", async (data, cb) => {
+        let { sender, tag, key, value } = data;
         await localStorageDB.set(key, value);
-        socket.emit("received", { messageId });
+        cb();
         const roundName = getRound(key);
         roundRunner({
           nodeKey: this.nodeKey,
@@ -66,10 +66,10 @@ class Client {
           clientReadyResolve: this.readyResolve,
         });
       });
-      socket.on("broadcast", async (data) => {
-        let { messageId, sender, tag, key, value } = data;
+      socket.on("broadcast", async (data, cb) => {
+        let { sender, tag, key, value } = data;
         await localStorageDB.set(key, value);
-        socket.emit("received", { messageId });
+        cb();
         const roundName = getRound(key);
         roundRunner({
           nodeKey: this.nodeKey,
@@ -98,8 +98,13 @@ class Client {
     });
   }
   async sign(msg_hash) {
-    let { s_i, local_sig } = await tssSign(localStorageDB, this.nodeKey, this.tag, msg_hash);
-    return { s_i }
+    let { s_i, local_sig } = await tssSign(
+      localStorageDB,
+      this.nodeKey,
+      this.tag,
+      msg_hash
+    );
+    return { s_i };
   }
 }
 
