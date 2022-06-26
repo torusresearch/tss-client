@@ -1,6 +1,6 @@
 const path = require("path");
 const os = require("os");
-const { Worker, MessageChannel, parentPort } = require("worker_threads");
+const { Worker, MessageChannel, parentPort } = require("bthreads");
 
 const workers = [];
 let workerCounter = 0;
