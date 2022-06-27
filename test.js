@@ -4,7 +4,6 @@ var keccak256 = require("keccak256");
 var eccrypto = require("eccrypto");
 var axios = require("axios");
 var BN = require("bn.js");
-const { assert } = require("elliptic/lib/elliptic/utils");
 
 const { io } = require("socket.io-client");
 const { Client, localStorageDB } = require("./client");
@@ -80,7 +79,9 @@ var reduced = shares.reduce(
   new BN(0)
 );
 
-assert.equal(reduced.toString(16), privKey.toString(16));
+if (reduced.toString(16) !== privKey.toString(16)) {
+  throw new Error("shares dont sum up to private key")
+};
 (async () => {
   try {
     let wsIds = await Promise.all(wsConnecting);
