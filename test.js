@@ -91,7 +91,8 @@ if (reduced.toString(16) !== privKey.toString(16)) {
       await generateNodeInfo(localStorageDB, "client", n + 1);
       let partiesAndClient = parties.slice();
       partiesAndClient.push(parties[parties.length - 1] + 1);
-      client = new Client(tag, n + 1, partiesAndClient, sockets);
+      client = new Client(n + 1, partiesAndClient, sockets);
+      client.registerTag(tag)
     }
 
     // get public params
@@ -206,7 +207,7 @@ if (reduced.toString(16) !== privKey.toString(16)) {
     // round 1
     console.log("start", Date.now() - now);
     if (useClient) {
-      await client.start();
+      await client.start(tag);
     }
     await Promise.all(
       endpoints.map((endpoint) =>
@@ -218,7 +219,7 @@ if (reduced.toString(16) !== privKey.toString(16)) {
 
     await onlinePhaseCompleteForServers;
     if (useClient) {
-      await client.ready;
+      await client.ready[tag];
     }
 
     let online_phase = Date.now() - now;
@@ -236,7 +237,7 @@ if (reduced.toString(16) !== privKey.toString(16)) {
         .then((obj) => obj.s_i)
     );
     if (useClient) {
-      s_is_awaiting.push(client.sign(new BN(msgHash).toString("hex")).then(obj => obj.s_i))
+      s_is_awaiting.push(client.sign(new BN(msgHash).toString("hex"), tag).then(obj => obj.s_i))
     }
     let s_is = await Promise.all(s_is_awaiting)
 
