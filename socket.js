@@ -2,7 +2,11 @@ const { Server } = require("socket.io");
 const connections = {};
 const randomId = require("random-id");
 const wsPort = process.argv[3];
-const io = new Server(wsPort);
+const io = new Server(wsPort, {
+  cors: {
+    methods: ["GET", "POST"]
+  }
+});
 console.log(`websocket on port ${wsPort}`);
 io.on("connection", (socket) => {
   connections[socket.id] = socket;
@@ -21,6 +25,7 @@ module.exports = {
     let resolve;
     let p = new Promise((r) => (resolve = r));
     const socket = connections[webSocketId];
+    console.log(`socket sending message ${key}`)
     socket.emit(
       "send",
       {
@@ -37,6 +42,7 @@ module.exports = {
     let resolve;
     let p = new Promise((r) => (resolve = r));
     const socket = connections[webSocketId];
+    console.log(`socket broadcasting message ${key}`)
     socket.emit(
       "broadcast",
       {

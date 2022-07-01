@@ -4,16 +4,18 @@ var keccak256 = require("keccak256");
 var eccrypto = require("eccrypto");
 var axios = require("axios");
 var BN = require("bn.js");
+window.tss_lib.default()
+window.setImmediate = window.setTimeout;
 
 const { io } = require("socket.io-client");
-const { Client, localStorageDB } = require("./client");
+const { Client, localStorageDB } = require("./client-browser");
 const {
   setShare,
   getGwi,
   setTagInfo,
   generateNodeInfo,
   getPublicParams,
-} = require("./methods");
+} = require("./methods-browser")(window.tss_lib);
 
 // let onlinephasestart = process.hrtime();
 
@@ -31,7 +33,7 @@ let sockets = [];
 const useClient = true;
 let client;
 
-let n = process.argv[2] ? parseInt(process.argv[2]) : 6;
+let n = 1 // process.argv[2] ? parseInt(process.argv[2]) : 2;
 
 // generate parties and endpoints
 for (let i = 1; i <= n; i++) {

@@ -1,7 +1,10 @@
 const express = require("express");
+const cors = require("cors");
 const app = express();
 app.use(express.json());
+app.use(cors("*"));
 app.use(express.static("public"));
+app.use(express.static("dist"));
 const port = process.argv[2];
 const nodeKey = port;
 if (!port) {
@@ -141,7 +144,7 @@ app.post("/sign", async (req, res) => {
 
 app.post("/get_signature", async (req, res) => {
   let { s_is, tag, msg_hash } = req.body;
-  console.log("getting signature", {s_is, msg_hash})
+  console.log("getting signature", { s_is, msg_hash });
   let sig = await getSignature(db, nodeKey, tag, s_is, msg_hash);
   res.send({ sig });
 });

@@ -3,8 +3,7 @@ const getTagInfo = async function (db, tag) {
   return JSON.parse(tagInfo);
 };
 
-const { work, workerNum } = require("./work");
-const tss = require("tss-lib");
+const { work } = require("./work-browser");
 
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
@@ -146,6 +145,7 @@ async function roundRunner({
   serverBroadcast,
   wsNotify = () => {},
   clientReadyResolve = null,
+  tss,
 }) {
   let release;
   try {
@@ -175,6 +175,7 @@ async function roundRunner({
         serverBroadcast,
         wsNotify,
         clientReadyResolve,
+        tss,
       });
     }
 
@@ -230,7 +231,7 @@ async function roundRunner({
       // check if all commitments have been received
       if (allTrue(roundTracker.round_1_commitment_received)) {
         for (let i = 0; i < parties.length; i++) {
-          let p = parties[i].toString();
+          let p = parties[i].toString();  
           if (p === index.toString()) continue;
           if (roundTracker.round_2_MessageA_sent[p] === true) {
             throw new Error(
@@ -247,9 +248,10 @@ async function roundRunner({
         let awaiting = [];
         for (let i = 0; i < parties.length; i++) {
           let p = parties[i].toString();
+          if (p === index.toString()) continue;
           let endpoint = endpoints[i];
           awaiting.push(
-            work(workerNum(), "message_A", [k_i, ek, h1h2Ntildes[i]]).then(
+            work("message_A", [k_i, ek, h1h2Ntildes[i]]).then(
               (res) => {
                 let [msgA, msgA_randomness] = res;
                 return Promise.all([
@@ -300,7 +302,7 @@ async function roundRunner({
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
 
-      await work(workerNum(), "message_Bs", [
+      await work("message_Bs", [
         gamma_i,
         w_i,
         ek,
@@ -389,7 +391,7 @@ async function roundRunner({
         beta_gammas = await Promise.all(beta_gammas);
         beta_wis = await Promise.all(beta_wis);
 
-        var [delta, sigma] = await work(workerNum(), "message_Alphas", [
+        var [delta, sigma] = await work("message_Alphas", [
           k_i,
           gamma_i,
           w_i,

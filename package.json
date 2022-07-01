@@ -4,19 +4,26 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "clean": "rimraf ./dist",
+    "build": "cross-env NODE_ENV=production webpack",
+    "build-tss": "cross-env NODE_ENV=production webpack -c webpack-tss-lib.config.js",
     "test": "node test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.18.6",
+    "@babel/preset-env": "^7.18.6",
     "axios": "^0.27.2",
+    "babelify": "^10.0.0",
     "bn.js": "^5.2.1",
     "browserify": "^17.0.0",
     "bthreads": "^0.5.1",
     "cors": "^2.8.5",
     "eccrypto": "^1.1.6",
     "elliptic": "^6.5.4",
+    "esmify": "^2.1.1",
     "express": "^4.18.1",
     "keccak256": "^1.0.6",
     "mock-local-storage": "^1.1.23",
@@ -29,6 +36,29 @@
     "tss-lib": "file:../tss-lib/pkg"
   },
   "devDependencies": {
-    "sequelize-cli": "^6.4.1"
+    "@babel/core": "~7.18.5",
+    "@babel/plugin-proposal-class-properties": "^7.17.12",
+    "@babel/plugin-proposal-object-rest-spread": "^7.18.0",
+    "@babel/plugin-transform-runtime": "~7.18.5",
+    "@babel/preset-env": "^7.18.2",
+    "@babel/runtime": "~7.18.3",
+    "assert": "^2.0.0",
+    "babel-loader": "^8.2.5",
+    "buffer": "^6.0.3",
+    "cross-env": "^7.0.3",
+    "crypto-browserify": "^3.12.0",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "prettier": "^2.7.1",
+    "process": "^0.11.10",
+    "rimraf": "^3.0.2",
+    "sequelize-cli": "^6.4.1",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "style-loader": "^3.3.1",
+    "url": "^0.11.0",
+    "webpack": "^5.73.0",
+    "webpack-bundle-analyzer": "^4.5.0",
+    "webpack-cli": "^4.10.0"
   }
 }
