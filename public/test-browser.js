@@ -4,7 +4,11 @@ var keccak256 = require("keccak256");
 var eccrypto = require("eccrypto");
 var axios = require("axios");
 var BN = require("bn.js");
-window.tss_lib.default()
+var tssReadyResolve;
+var tssReadyPromise = new Promise(r => tssReadyPromise = r)
+window.tss_lib.default().then(() => {
+  tssReadyResolve()
+})
 window.setImmediate = window.setTimeout;
 
 const { io } = require("socket.io-client");
@@ -85,6 +89,7 @@ if (reduced.toString(16) !== privKey.toString(16)) {
 };
 (async () => {
   try {
+    await tssReadyPromise;
     let wsIds = await Promise.all(wsConnecting);
     let now = Date.now();
 
