@@ -5,7 +5,7 @@ var eccrypto = require("eccrypto");
 var axios = require("axios");
 var BN = require("bn.js");
 var tssReadyResolve;
-var tssReadyPromise = new Promise(r => tssReadyPromise = r)
+var tssReadyPromise = new Promise(r => tssReadyResolve = r)
 window.tss_lib.default().then(() => {
   tssReadyResolve()
 })
