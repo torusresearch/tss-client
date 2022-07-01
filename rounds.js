@@ -9,15 +9,20 @@ const tssLib = require("tss-lib");
 const tss = new Proxy(tssLib, {
   get: (target, prop) => {
     if (typeof target[prop] === "function") {
-        return function() {
-            console.log("tss method", prop, "is being called with args", JSON.stringify(arguments));
-            return target[prop](...arguments);
-        }
+      return function () {
+        console.log(
+          "tss method",
+          prop,
+          "is being called with args",
+          JSON.stringify(arguments)
+        );
+        return target[prop](...arguments);
+      };
     } else {
-        return target[prop]
+      return target[prop];
     }
-  }
-})
+  },
+});
 
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
@@ -313,42 +318,50 @@ async function roundRunner({
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
       let promResolve;
-      let prom = new Promise(r => promResolve = r);
-      work(workerNum(), "message_Bs", [
-        gamma_i,
-        w_i,
-        ek,
-        msgA,
-        h1h2Ntilde,
-      ]).then((res) => {
-        let [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] =
-          res;
-        return Promise.all([
-          db.set(`tag-${tag}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_gamma`, beta_gamma),
-          db.set(
-            `tag-${tag}:from-${index}:to-${party}:beta_randomness`,
-            beta_randomness
-          ),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_tag`, beta_tag),
-          db.set(`tag-${tag}:from-${index}:to-${party}:m_b_w`, m_b_w),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_wi`, beta_wi),
-          serverSend(
-            index,
-            tag,
-            endpoint,
-            `tag-${tag}:from-${index}:to-${party}:m_b_gamma`,
-            m_b_gamma
-          ),
-          serverSend(
-            index,
-            tag,
-            endpoint,
-            `tag-${tag}:from-${index}:to-${party}:m_b_w`,
-            m_b_w
-          ),
-        ]);
-      }).then(promResolve);
+      let prom = new Promise((r) => (promResolve = r));
+      work(workerNum(), "message_Bs", [gamma_i, w_i, ek, msgA, h1h2Ntilde])
+        .then((res) => {
+          let [
+            m_b_gamma,
+            beta_gamma,
+            beta_randomness,
+            beta_tag,
+            m_b_w,
+            beta_wi,
+          ] = res;
+          return Promise.all([
+            db.set(`tag-${tag}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma),
+            db.set(
+              `tag-${tag}:from-${index}:to-${party}:beta_gamma`,
+              beta_gamma
+            ),
+            db.set(
+              `tag-${tag}:from-${index}:to-${party}:beta_randomness`,
+              beta_randomness
+            ),
+            db.set(`tag-${tag}:from-${index}:to-${party}:beta_tag`, beta_tag),
+            db.set(`tag-${tag}:from-${index}:to-${party}:m_b_w`, m_b_w),
+            db.set(`tag-${tag}:from-${index}:to-${party}:beta_wi`, beta_wi),
+          ]).then(() => {
+            return Promise.all([
+              serverSend(
+                index,
+                tag,
+                endpoint,
+                `tag-${tag}:from-${index}:to-${party}:m_b_gamma`,
+                m_b_gamma
+              ),
+              serverSend(
+                index,
+                tag,
+                endpoint,
+                `tag-${tag}:from-${index}:to-${party}:m_b_w`,
+                m_b_w
+              ),
+            ]);
+          });
+        })
+        .then(promResolve);
       await prom;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
