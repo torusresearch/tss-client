@@ -223,7 +223,6 @@ async function roundRunner({
       throw new Error("round 1 commitment broadcast has already been sent");
     } else if (roundName === "round_1_commitment_received") {
       if (party === undefined) {
-        console.log("WHATTTT arguments", JSON.stringify(arguments));
         throw new Error("round 1 commitment received from unknown");
       }
       roundTracker.round_1_commitment_received[party] = true;
@@ -247,6 +246,7 @@ async function roundRunner({
         let awaiting = [];
         for (let i = 0; i < parties.length; i++) {
           let p = parties[i].toString();
+          if (p === index.toString()) continue;
           let endpoint = endpoints[i];
           awaiting.push(
             work(workerNum(), "message_A", [k_i, ek, h1h2Ntildes[i]]).then(
