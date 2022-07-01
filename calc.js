@@ -1,5 +1,18 @@
 const { parentPort } = require("worker_threads");
-const tss = require('tss-lib')
+const tssLib = require('tss-lib')
+
+const tss = new Proxy(tssLib, {
+    get: (target, prop) => {
+      if (typeof target[prop] === "function") {
+          return function() {
+              console.log("tss method", prop, "is being called with args", JSON.stringify(arguments));
+              return target[prop](...arguments);
+          }
+      } else {
+          return target[prop]
+      }
+    }
+  })
 parentPort.on("message", ({ data, ports }) => {
     const {method, args} = data;
     const result = tss[method](...args)

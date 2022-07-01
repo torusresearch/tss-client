@@ -10,7 +10,7 @@ const tss = new Proxy(tssLib, {
   get: (target, prop) => {
     if (typeof target[prop] === "function") {
         return function() {
-            console.log("tss method", target, "is being called with args", JSON.stringify(arguments));
+            console.log("tss method", prop, "is being called with args", JSON.stringify(arguments));
             return target[prop](...arguments);
         }
     } else {
@@ -312,8 +312,9 @@ async function roundRunner({
       let endpoint = endpoints[i];
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
-
-      await work(workerNum(), "message_Bs", [
+      let promResolve;
+      let prom = new Promise(r => promResolve = r);
+      work(workerNum(), "message_Bs", [
         gamma_i,
         w_i,
         ek,
@@ -347,7 +348,8 @@ async function roundRunner({
             m_b_w
           ),
         ]);
-      });
+      }).then(promResolve);
+      await prom;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
       return;

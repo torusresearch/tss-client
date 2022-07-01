@@ -301,8 +301,9 @@ async function roundRunner({
       let endpoint = endpoints[i];
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
-
-      await work("message_Bs", [
+      let promResolve;
+      let prom = new Promise(r => promResolve = r)
+      work("message_Bs", [
         gamma_i,
         w_i,
         ek,
@@ -336,7 +337,8 @@ async function roundRunner({
             m_b_w
           ),
         ]);
-      });
+      }).then(promResolve);
+      await prom;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
       return;
