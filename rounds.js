@@ -4,7 +4,20 @@ const getTagInfo = async function (db, tag) {
 };
 
 const { work, workerNum } = require("./work");
-const tss = require("tss-lib");
+const tssLib = require("tss-lib");
+
+const tss = new Proxy(tssLib, {
+  get: (target, prop) => {
+    if (typeof target[prop] === "function") {
+        return function() {
+            console.log("tss method", target, "is being called with args", JSON.stringify(arguments));
+            return target[prop](...arguments);
+        }
+    } else {
+        return target[prop]
+    }
+  }
+})
 
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
