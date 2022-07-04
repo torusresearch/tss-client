@@ -301,7 +301,7 @@ async function roundRunner({
       roundTracker.round_2_MessageA_received[party] = true;
       if (
         roundTracker.round_2_MessageBs_gamma_sent[party] === true ||
-        roundTracker.round_2_MessageBs_w_sent === true
+        roundTracker.round_2_MessageBs_w_sent[party] === true
       ) {
         throw new Error(
           `round 2 message B gamma/w has already been sent for party ${party}, ${roundName}`
@@ -365,17 +365,37 @@ async function roundRunner({
       await prom;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
+      await roundRunner({
+        nodeKey,
+        db,
+        tag,
+        roundName: "round_2_MessageBs_gamma_sent",
+        party: undefined,
+        serverSend,
+        serverBroadcast,
+        wsNotify,
+        clientReadyResolve,
+      });
       return;
     } else if (
       roundName === "round_2_MessageBs_gamma_received" ||
-      roundName === "round_2_MessageBs_w_received"
+      roundName === "round_2_MessageBs_w_received" ||
+      roundName === "round_2_MessageBs_gamma_sent" ||
+      roundName === "round_2_MessageBs_w_sent"
     ) {
-      if (party === undefined)
-        throw new Error("round 2 message B received from unknown");
-      roundTracker[roundName][party] = true;
+      if (
+        roundName === "round_2_MessageBs_gamma_received" ||
+        roundName === "round_2_MessageBs_w_received"
+      ) {
+        if (party === undefined)
+          throw new Error("round 2 message B received from unknown");
+          roundTracker[roundName][party] = true;
+      }
       if (
         allTrue(roundTracker.round_2_MessageBs_w_received) &&
-        allTrue(roundTracker.round_2_MessageBs_gamma_received)
+        allTrue(roundTracker.round_2_MessageBs_gamma_received) &&
+        allTrue(roundTracker.round_2_MessageBs_gamma_sent) &&
+        allTrue(roundTracker.round_2_MessageBs_w_sent)
       ) {
         // update roundTracker and release lock
         for (let i = 0; i < parties.length; i++) {

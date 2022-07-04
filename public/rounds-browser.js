@@ -231,7 +231,7 @@ async function roundRunner({
       // check if all commitments have been received
       if (allTrue(roundTracker.round_1_commitment_received)) {
         for (let i = 0; i < parties.length; i++) {
-          let p = parties[i].toString();  
+          let p = parties[i].toString();
           if (p === index.toString()) continue;
           if (roundTracker.round_2_MessageA_sent[p] === true) {
             throw new Error(
@@ -251,26 +251,24 @@ async function roundRunner({
           if (p === index.toString()) continue;
           let endpoint = endpoints[i];
           awaiting.push(
-            work("message_A", [k_i, ek, h1h2Ntildes[i]]).then(
-              (res) => {
-                let [msgA, msgA_randomness] = res;
-                return Promise.all([
-                  db.set(`tag-${tag}:from-${index}:to-${p}:m_a`, msgA),
-                  db.set(
-                    `tag-${tag}:from-${index}:to-${p}:m_a_randomness`,
-                    msgA_randomness
-                  ),
-                ]).then(() => {
-                  return serverSend(
-                    index,
-                    tag,
-                    endpoint,
-                    `tag-${tag}:from-${index}:to-${p}:m_a`,
-                    msgA
-                  );
-                });
-              }
-            )
+            work("message_A", [k_i, ek, h1h2Ntildes[i]]).then((res) => {
+              let [msgA, msgA_randomness] = res;
+              return Promise.all([
+                db.set(`tag-${tag}:from-${index}:to-${p}:m_a`, msgA),
+                db.set(
+                  `tag-${tag}:from-${index}:to-${p}:m_a_randomness`,
+                  msgA_randomness
+                ),
+              ]).then(() => {
+                return serverSend(
+                  index,
+                  tag,
+                  endpoint,
+                  `tag-${tag}:from-${index}:to-${p}:m_a`,
+                  msgA
+                );
+              });
+            })
           );
         }
         await Promise.all(awaiting);
@@ -302,56 +300,81 @@ async function roundRunner({
       let ek = eks[i];
       let msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
       let promResolve;
-      let prom = new Promise(r => promResolve = r)
-      work("message_Bs", [
-        gamma_i,
-        w_i,
-        ek,
-        msgA,
-        h1h2Ntilde,
-      ]).then((res) => {
-        let [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] =
-          res;
-        return Promise.all([
-          db.set(`tag-${tag}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_gamma`, beta_gamma),
-          db.set(
-            `tag-${tag}:from-${index}:to-${party}:beta_randomness`,
-            beta_randomness
-          ),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_tag`, beta_tag),
-          db.set(`tag-${tag}:from-${index}:to-${party}:m_b_w`, m_b_w),
-          db.set(`tag-${tag}:from-${index}:to-${party}:beta_wi`, beta_wi),
-          serverSend(
-            index,
-            tag,
-            endpoint,
-            `tag-${tag}:from-${index}:to-${party}:m_b_gamma`,
-            m_b_gamma
-          ),
-          serverSend(
-            index,
-            tag,
-            endpoint,
-            `tag-${tag}:from-${index}:to-${party}:m_b_w`,
-            m_b_w
-          ),
-        ]);
-      }).then(promResolve);
+      let prom = new Promise((r) => (promResolve = r));
+      work("message_Bs", [gamma_i, w_i, ek, msgA, h1h2Ntilde])
+        .then((res) => {
+          let [
+            m_b_gamma,
+            beta_gamma,
+            beta_randomness,
+            beta_tag,
+            m_b_w,
+            beta_wi,
+          ] = res;
+          return Promise.all([
+            db.set(`tag-${tag}:from-${index}:to-${party}:m_b_gamma`, m_b_gamma),
+            db.set(
+              `tag-${tag}:from-${index}:to-${party}:beta_gamma`,
+              beta_gamma
+            ),
+            db.set(
+              `tag-${tag}:from-${index}:to-${party}:beta_randomness`,
+              beta_randomness
+            ),
+            db.set(`tag-${tag}:from-${index}:to-${party}:beta_tag`, beta_tag),
+            db.set(`tag-${tag}:from-${index}:to-${party}:m_b_w`, m_b_w),
+            db.set(`tag-${tag}:from-${index}:to-${party}:beta_wi`, beta_wi),
+            serverSend(
+              index,
+              tag,
+              endpoint,
+              `tag-${tag}:from-${index}:to-${party}:m_b_gamma`,
+              m_b_gamma
+            ),
+            serverSend(
+              index,
+              tag,
+              endpoint,
+              `tag-${tag}:from-${index}:to-${party}:m_b_w`,
+              m_b_w
+            ),
+          ]);
+        })
+        .then(promResolve);
       await prom;
       await db.set(`tag-${tag}:rounds`, JSON.stringify(roundTracker));
       release();
+      await roundRunner({
+        nodeKey,
+        db,
+        tag,
+        roundName: "round_2_MessageBs_gamma_sent",
+        party: undefined,
+        serverSend,
+        serverBroadcast,
+        wsNotify,
+        clientReadyResolve,
+      });
       return;
     } else if (
       roundName === "round_2_MessageBs_gamma_received" ||
-      roundName === "round_2_MessageBs_w_received"
+      roundName === "round_2_MessageBs_w_received" ||
+      roundName === "round_2_MessageBs_gamma_sent" ||
+      roundName === "round_2_MessageBs_w_sent"
     ) {
-      if (party === undefined)
-        throw new Error("round 2 message B received from unknown");
-      roundTracker[roundName][party] = true;
+      if (
+        roundName === "round_2_MessageBs_gamma_received" ||
+        roundName === "round_2_MessageBs_w_received"
+      ) {
+        if (party === undefined)
+          throw new Error("round 2 message B received from unknown");
+        roundTracker[roundName][party] = true;
+      }
       if (
         allTrue(roundTracker.round_2_MessageBs_w_received) &&
-        allTrue(roundTracker.round_2_MessageBs_gamma_received)
+        allTrue(roundTracker.round_2_MessageBs_gamma_received) &&
+        allTrue(roundTracker.round_2_MessageBs_gamma_sent) &&
+        allTrue(roundTracker.round_2_MessageBs_w_sent)
       ) {
         // update roundTracker and release lock
         for (let i = 0; i < parties.length; i++) {
