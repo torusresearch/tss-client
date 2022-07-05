@@ -24,6 +24,10 @@ const tss = new Proxy(tssLib, {
   },
 });
 
+process.on('uncaughtException', function(err) {
+  console.log('Caught exception: ' + err);
+});
+
 function createRoundTracker(parties, selfIndex) {
   let roundTracker = {};
 

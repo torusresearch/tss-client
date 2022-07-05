@@ -1,2 +1,5 @@
 80*.json
 node_modules/
+.DS_Store
+.idea/
+dist/test.min.js
