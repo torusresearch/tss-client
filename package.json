@@ -33,7 +33,7 @@
     "socket.io-client": "^4.5.1",
     "sqlite3": "^5.0.8",
     "threads": "^1.7.0",
-    "tss-lib": "file:../tss-lib/pkg"
+    "tss-lib": "file:nodepkg"
   },
   "devDependencies": {
     "@babel/core": "~7.18.5",

@@ -1,0 +1,11 @@
+{
+  "name": "tss-lib",
+  "version": "0.1.1",
+  "files": [
+    "tss_lib_bg.wasm",
+    "tss_lib.js",
+    "tss_lib.d.ts"
+  ],
+  "main": "tss_lib.js",
+  "types": "tss_lib.d.ts"
+}

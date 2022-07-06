@@ -1,0 +1,30 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export function generate_keys(a: number, b: number): void;
+export function random_bigint(a: number): void;
+export function generator(a: number): void;
+export function scalar_mul(a: number, b: number, c: number, d: number, e: number): void;
+export function coords_to_pt(a: number, b: number, c: number, d: number, e: number): void;
+export function phase_1_broadcast(a: number, b: number, c: number): void;
+export function message_A(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
+export function message_Bs(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number): void;
+export function message_Alphas(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number): void;
+export function phase_3_deltaInv(a: number, b: number, c: number): void;
+export function get_b_proof(a: number, b: number, c: number): void;
+export function phase_4_Di_verify(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number): void;
+export function phase_5_Rki(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number): void;
+export function phase_5_verify(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number): number;
+export function phase_6_Rsigmai(a: number, b: number, c: number, d: number, e: number): void;
+export function phase_6_verify(a: number, b: number, c: number, d: number): number;
+export function phase_7_sign(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number): void;
+export function get_signature(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number): void;
+export function rustsecp256k1_v0_4_1_context_create(a: number): number;
+export function rustsecp256k1_v0_4_1_context_destroy(a: number): void;
+export function rustsecp256k1_v0_4_1_default_illegal_callback_fn(a: number, b: number): void;
+export function rustsecp256k1_v0_4_1_default_error_callback_fn(a: number, b: number): void;
+export function __wbindgen_malloc(a: number): number;
+export function __wbindgen_realloc(a: number, b: number, c: number): number;
+export function __wbindgen_add_to_stack_pointer(a: number): number;
+export function __wbindgen_free(a: number, b: number): void;
+export function __wbindgen_exn_store(a: number): void;
