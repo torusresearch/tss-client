@@ -19,9 +19,11 @@ const {
   setTagInfo,
   tssSign,
   getSignature,
+  getTimer,
+  resetTimer,
 } = require("./methods");
 
-const db = require("./mem_db")(`${port}`);
+const db = require("./fs_db")(`${port}`);
 const { wsSend, wsBroadcast, wsNotify } = require("./socket.js");
 const { serverBroadcast, serverSend } = require("./comm")(
   wsSend,
@@ -147,6 +149,19 @@ app.post("/get_signature", async (req, res) => {
   console.log("getting signature", { s_is, msg_hash });
   let sig = await getSignature(db, nodeKey, tag, s_is, msg_hash);
   res.send({ sig });
+});
+
+app.post("/get_timer", async (req, res) => {
+  console.log("getting timer");
+  let r = await getTimer();
+  console.log(r);
+  res.send({ r });
+});
+
+app.post("/reset_timer", async (req, res) => {
+  console.log("resetting timer");
+  let r = await resetTimer();
+  res.send({ r });
 });
 
 (async () => {

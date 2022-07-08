@@ -37,7 +37,7 @@ let sockets = [];
 const useClient = true;
 let client;
 
-let n = 1 // process.argv[2] ? parseInt(process.argv[2]) : 2;
+let n = 6 // process.argv[2] ? parseInt(process.argv[2]) : 2;
 
 // generate parties and endpoints
 for (let i = 1; i <= n; i++) {
@@ -88,8 +88,10 @@ if (reduced.toString(16) !== privKey.toString(16)) {
   throw new Error("shares dont sum up to private key")
 };
 (async () => {
+  let timer = `${endpoint_prefix}${base_port + 1}`;
   try {
     await tssReadyPromise;
+    console.log(await axios.post(`${timer}/reset_timer`, {}));
     let wsIds = await Promise.all(wsConnecting);
     let now = Date.now();
 
@@ -288,4 +290,5 @@ if (reduced.toString(16) !== privKey.toString(16)) {
   } catch (e) {
     console.error(e);
   }
+  console.log(await axios.post(`${timer}/get_timer`, {}));
 })();

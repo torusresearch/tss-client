@@ -78,4 +78,10 @@ module.exports = {
     let R = await db.get(`${nodeKey}:${tag}:R`);
     return tss.get_signature(pubkey, msg_hash, R, s_is);
   },
+  resetTimer: async () => {
+      tss.reset_timing_ms();
+    },
+    getTimer: async () => {
+          return tss.get_timing_ms();
+   },
 };

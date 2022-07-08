@@ -144,3 +144,48 @@ export function phase_7_sign(msg_hash: string, k_i: string, R: string, sigma_i: 
 * @returns {string}
 */
 export function get_signature(y: string, msg_hash: string, R: string, local_sig_sis: any[]): string;
+
+export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
+
+export interface InitOutput {
+  readonly memory: WebAssembly.Memory;
+  readonly generate_keys: (a: number, b: number) => void;
+  readonly random_bigint: (a: number) => void;
+  readonly generator: (a: number) => void;
+  readonly scalar_mul: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly coords_to_pt: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly phase_1_broadcast: (a: number, b: number, c: number) => void;
+  readonly message_A: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+  readonly message_Bs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
+  readonly message_Alphas: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number) => void;
+  readonly phase_3_deltaInv: (a: number, b: number, c: number) => void;
+  readonly get_b_proof: (a: number, b: number, c: number) => void;
+  readonly phase_4_Di_verify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => void;
+  readonly phase_5_Rki: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => void;
+  readonly phase_5_verify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => number;
+  readonly phase_6_Rsigmai: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly phase_6_verify: (a: number, b: number, c: number, d: number) => number;
+  readonly phase_7_sign: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
+  readonly get_signature: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+  readonly reset_timing_ms: () => void;
+  readonly get_timing_ms: () => number;
+  readonly rustsecp256k1_v0_4_1_context_create: (a: number) => number;
+  readonly rustsecp256k1_v0_4_1_context_destroy: (a: number) => void;
+  readonly rustsecp256k1_v0_4_1_default_illegal_callback_fn: (a: number, b: number) => void;
+  readonly rustsecp256k1_v0_4_1_default_error_callback_fn: (a: number, b: number) => void;
+  readonly __wbindgen_malloc: (a: number) => number;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
+  readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_free: (a: number, b: number) => void;
+  readonly __wbindgen_exn_store: (a: number) => void;
+}
+
+/**
+* If `module_or_path` is {RequestInfo} or {URL}, makes a request and
+* for everything else, calls `WebAssembly.instantiate` directly.
+*
+* @param {InitInput | Promise<InitInput>} module_or_path
+*
+* @returns {Promise<InitOutput>}
+*/
+export default function init (module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;

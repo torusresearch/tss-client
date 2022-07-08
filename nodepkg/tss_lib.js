@@ -36,12 +36,12 @@ let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true 
 
 cachedTextDecoder.decode();
 
-let cachedUint8Memory0;
+let cachegetUint8Memory0 = null;
 function getUint8Memory0() {
-    if (cachedUint8Memory0.byteLength === 0) {
-        cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
+    if (cachegetUint8Memory0 === null || cachegetUint8Memory0.buffer !== wasm.memory.buffer) {
+        cachegetUint8Memory0 = new Uint8Array(wasm.memory.buffer);
     }
-    return cachedUint8Memory0;
+    return cachegetUint8Memory0;
 }
 
 function getStringFromWasm0(ptr, len) {
@@ -107,20 +107,33 @@ function isLikeNone(x) {
     return x === undefined || x === null;
 }
 
-let cachedInt32Memory0;
+let cachegetInt32Memory0 = null;
 function getInt32Memory0() {
-    if (cachedInt32Memory0.byteLength === 0) {
-        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
+    if (cachegetInt32Memory0 === null || cachegetInt32Memory0.buffer !== wasm.memory.buffer) {
+        cachegetInt32Memory0 = new Int32Array(wasm.memory.buffer);
     }
-    return cachedInt32Memory0;
+    return cachegetInt32Memory0;
 }
+/**
+*/
+module.exports.reset_timing_ms = function() {
+    wasm.reset_timing_ms();
+};
 
-let cachedUint32Memory0;
+/**
+* @returns {number}
+*/
+module.exports.get_timing_ms = function() {
+    const ret = wasm.get_timing_ms();
+    return ret;
+};
+
+let cachegetUint32Memory0 = null;
 function getUint32Memory0() {
-    if (cachedUint32Memory0.byteLength === 0) {
-        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
+    if (cachegetUint32Memory0 === null || cachegetUint32Memory0.buffer !== wasm.memory.buffer) {
+        cachegetUint32Memory0 = new Uint32Array(wasm.memory.buffer);
     }
-    return cachedUint32Memory0;
+    return cachegetUint32Memory0;
 }
 
 function getArrayJsValueFromWasm0(ptr, len) {
@@ -693,14 +706,6 @@ module.exports.__wbg_require_6461b1e9a0d7c34a = function(arg0, arg1) {
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_randomFillSync_d2ba53160aec6aba = function(arg0, arg1, arg2) {
-    getObject(arg0).randomFillSync(getArrayU8FromWasm0(arg1, arg2));
-};
-
-module.exports.__wbg_getRandomValues_e57c9b75ddead065 = function(arg0, arg1) {
-    getObject(arg0).getRandomValues(getObject(arg1));
-};
-
 module.exports.__wbg_self_86b4b13392c7af56 = function() { return handleError(function () {
     const ret = self.self;
     return addHeapObject(ret);
@@ -731,31 +736,44 @@ module.exports.__wbg_getRandomValues_dd27e6b0652b3236 = function(arg0) {
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_buffer_de1150f91b23aa89 = function(arg0) {
+module.exports.__wbg_getRandomValues_e57c9b75ddead065 = function(arg0, arg1) {
+    getObject(arg0).getRandomValues(getObject(arg1));
+};
+
+module.exports.__wbg_randomFillSync_d2ba53160aec6aba = function(arg0, arg1, arg2) {
+    getObject(arg0).randomFillSync(getArrayU8FromWasm0(arg1, arg2));
+};
+
+module.exports.__wbg_now_04bcd3bf9fb6165e = function() {
+    const ret = Date.now();
+    return ret;
+};
+
+module.exports.__wbg_buffer_7af23f65f6c64548 = function(arg0) {
     const ret = getObject(arg0).buffer;
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_new_97cf52648830a70d = function(arg0) {
+module.exports.__wbg_new_cc9018bd6f283b6f = function(arg0) {
     const ret = new Uint8Array(getObject(arg0));
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_set_a0172b213e2469e9 = function(arg0, arg1, arg2) {
+module.exports.__wbg_set_f25e869e4565d2a2 = function(arg0, arg1, arg2) {
     getObject(arg0).set(getObject(arg1), arg2 >>> 0);
 };
 
-module.exports.__wbg_length_e09c0b925ab8de5d = function(arg0) {
+module.exports.__wbg_length_0acb1cf9bbaf8519 = function(arg0) {
     const ret = getObject(arg0).length;
     return ret;
 };
 
-module.exports.__wbg_newwithlength_e833b89f9db02732 = function(arg0) {
+module.exports.__wbg_newwithlength_8f0657faca9f1422 = function(arg0) {
     const ret = new Uint8Array(arg0 >>> 0);
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_subarray_9482ae5cd5cd99d3 = function(arg0, arg1, arg2) {
+module.exports.__wbg_subarray_da527dbd24eafb6b = function(arg0, arg1, arg2) {
     const ret = getObject(arg0).subarray(arg1 >>> 0, arg2 >>> 0);
     return addHeapObject(ret);
 };
@@ -776,8 +794,4 @@ const wasmModule = new WebAssembly.Module(bytes);
 const wasmInstance = new WebAssembly.Instance(wasmModule, imports);
 wasm = wasmInstance.exports;
 module.exports.__wasm = wasm;
-
-cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
-cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
-cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
 
