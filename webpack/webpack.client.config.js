@@ -51,6 +51,10 @@ module.exports = {
           from: "node_modules/tss-lib/dist/tss_lib.min.js",
           to: path.resolve(__dirname, "../dist/")
         },
+        {
+          from: "node_modules/tss-lib/wasm/client.wasm",
+          to: path.resolve(__dirname, "../dist/tss_lib_bg.wasm")
+        }
       ],
     }),
   ]),
