@@ -21,6 +21,7 @@
     "promise/param-names": "off",
     "promise/valid-params": "off",
     "promise/no-nesting": "off",
-    "promise/catch-or-return": "off"
+    "promise/catch-or-return": "off",
+    "require-atomic-updates": "off"
   }
 }
