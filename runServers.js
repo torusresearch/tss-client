@@ -5,7 +5,7 @@ let n = process.argv[2] ? parseInt(process.argv[2]) : 6;
 (async () => {
   for (let i = 1; i <= n; i++) {
     let tssServer = spawn("node", [
-      "./server.js",
+      "./dist/server.js",
       `${base_port + i}`,
       `${base_ws_port + i}`,
     ]);

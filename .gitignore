@@ -2,4 +2,7 @@
 node_modules/
 .DS_Store
 .idea/
-dist/test.min.js
+dist
+pkg/dist
+pkg/*.tgz
+types/*

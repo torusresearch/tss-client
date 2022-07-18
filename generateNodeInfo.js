@@ -2,7 +2,7 @@ var axios = require("axios");
 var base_port = 8000;
 var endpoint_prefix = "http://localhost:";
 
-var parties = [1, 2, 3, 4, 5, 6];
+var parties = [1];
 var endpoints = parties.map(
   (party) => `${endpoint_prefix}${base_port + parseInt(party)}`
 );
