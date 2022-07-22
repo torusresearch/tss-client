@@ -9,12 +9,8 @@
 //     const result = tss[method](...args)
 //     postMessage({ data: result })
 // }
-document = {};
-importScripts("tss_lib.min.js");
-let resolve;
-const p = new Promise((r) => (resolve = r));
-tss_lib.default().then(resolve);
-const tss = tss_lib;
+import tss_lib from "tss-lib";
+
 onmessage = async ({ data }) => {
   await p;
   const { method, args } = data.data;

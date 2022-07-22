@@ -16,6 +16,10 @@ module.exports = {
     ...config.output,
     filename: "test.min.js"
   },
+  module: {
+    ...config.module,
+    rules: config.module.rules.concat([])
+  },
   resolve: {
     ...config.resolve,
     alias: {

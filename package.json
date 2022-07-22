@@ -38,7 +38,7 @@
     "socket.io-client": "^4.5.1",
     "sqlite3": "^5.0.8",
     "threads": "^1.7.0",
-    "tss-lib": "./pkg/tss-lib-0.1.16.tgz"
+    "tss-lib": "./pkg"
   },
   "devDependencies": {
     "@babel/core": "~7.18.5",
