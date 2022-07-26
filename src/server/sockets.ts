@@ -1,9 +1,11 @@
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
-const connections = {};
+import { Serializable } from "../interfaces";
+
+const connections: Record<string, Socket> = {};
 const wsPort = process.argv[3];
 
-const io = new Server(wsPort, {
+const io = new Server(parseInt(wsPort), {
   cors: {
     methods: ["GET", "POST"],
   },
@@ -25,7 +27,7 @@ export const wsNotify = async (self, tag, webSocketId, key, value) => {
   });
 };
 
-export const wsSend = async (self, tag, webSocketId, key, value) => {
+export const wsSend = async (self: string, tag: string, webSocketId: string, key: string, value: Serializable) => {
   let resolve;
   const p = new Promise((r) => (resolve = r));
   const socket = connections[webSocketId];
@@ -43,7 +45,7 @@ export const wsSend = async (self, tag, webSocketId, key, value) => {
   return p;
 };
 
-export const wsBroadcast = async (self, tag, webSocketId, key, value) => {
+export const wsBroadcast = async (self: string, tag: string, webSocketId: string, key: string, value: Serializable) => {
   let resolve;
   const p = new Promise((r) => (resolve = r));
   const socket = connections[webSocketId];

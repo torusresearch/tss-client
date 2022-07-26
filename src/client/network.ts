@@ -1,6 +1,8 @@
 import axios, { AxiosResponse } from "axios";
 import { io, Socket } from "socket.io-client";
 
+import { PublicParams } from "../interfaces";
+
 export default class Network {
   private _wsConnecting: Promise<string>[] = [];
 
@@ -44,13 +46,13 @@ export default class Network {
     return axios.post(`${baseUrl}/reset_timer`, {});
   };
 
-  public getPublicParamsFromNodes = (): Promise<AxiosResponse>[] => {
+  public getPublicParamsFromNodes = (): Promise<PublicParams>[] => {
     return this._endpoints.map((endpoint) => {
       return axios.get(`${endpoint}/get_public_params`).then((res) => res.data);
     });
   };
 
-  public getGWIS = (tag: string): Promise<AxiosResponse>[] => {
+  public getGWIS = (tag: string): Promise<string>[] => {
     return this._endpoints.map((endpoint) => {
       return axios
         .get(`${endpoint}/gwi/${tag}`)
@@ -59,7 +61,7 @@ export default class Network {
     });
   };
 
-  public setTagInfoOnNodes = ({ nodes, parties, pubkey, publicParams, gwis, tag }): Promise<AxiosResponse>[] => {
+  public setTagInfoOnNodes = ({ nodes, parties, pubkey, publicParams, gwis, tag }): Promise<void>[] => {
     const awaiting = [];
     for (let i = 0; i < nodes; i++) {
       const endpoint = this._endpoints[i];
@@ -95,7 +97,7 @@ export default class Network {
     });
   };
 
-  public start = (tag: string) => {
+  public start = (tag: string): Promise<AxiosResponse>[] => {
     return this._endpoints.map((endpoint) =>
       axios.post(`${endpoint}/start`, {
         tag,
@@ -103,7 +105,7 @@ export default class Network {
     );
   };
 
-  public signOnNodes = (data, tag: string) => {
+  public signOnNodes = (data: string, tag: string): Promise<string>[] => {
     return this._endpoints.map((endpoint) =>
       axios
         .post(`${endpoint}/sign`, {
@@ -115,7 +117,7 @@ export default class Network {
     );
   };
 
-  public getSignature = (s_is, tag, data) => {
+  public getSignature = (s_is: string[], tag: string, data: string): Promise<AxiosResponse> => {
     return axios.post(`${this._endpoints[0]}/get_signature`, {
       s_is,
       tag,

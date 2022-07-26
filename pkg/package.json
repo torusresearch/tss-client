@@ -6,7 +6,7 @@
     "node.js",
     "browser.js",
     "tss_lib.d.ts",
-    "dist/tss_lib.min.js"
+    "dist/*"
   ],
   "main": "node.js",
   "browser": "dist/tss_lib.min.js",

@@ -1,41 +1,44 @@
 import axios from "axios";
 
-const getWebSocketID = (websocketEndpoint) => {
-  return websocketEndpoint.split(":")[1];
-};
+import { Serializable } from "../interfaces";
 
-const comm = (wsSend, wsBroadcast, selfReceiveBroadcast) => {
-  return {
-    serverBroadcast: async (self, parties, tag, endpoints, key, value) => {
-      return Promise.all(
-        endpoints.map((endpoint: string, i: number) => {
-          if (endpoint.indexOf("websocket") !== -1) {
-            if (self.toString() !== parties[i].toString()) {
-              return wsBroadcast(self, tag, getWebSocketID(endpoint), key, value);
-            }
-            return selfReceiveBroadcast[tag](self, tag, key, value);
+class Comm {
+  constructor(private _wsSend, private _wsBroadcast, private _selfReceiveBroadcast) {}
+
+  serverBroadcast = async (self: number, parties: number[], tag: string, endpoints: string[], key: string, value: Serializable) => {
+    return Promise.all(
+      endpoints.map((endpoint: string, i: number) => {
+        if (endpoint.indexOf("websocket") !== -1) {
+          if (self.toString() !== parties[i].toString()) {
+            return this._wsBroadcast(self, tag, this._getWebSocketID(endpoint), key, value);
           }
-          return axios.post(`${endpoint}/broadcast`, {
-            sender: self,
-            tag,
-            key,
-            value,
-          });
-        })
-      );
-    },
-    serverSend: async (self, tag, endpoint, key, value) => {
-      if (endpoint.indexOf("websocket") !== -1) {
-        return wsSend(self, tag, getWebSocketID(endpoint), key, value);
-      }
-      return axios.post(`${endpoint}/send`, {
-        sender: self,
-        tag,
-        key,
-        value,
-      });
-    },
+          return this._selfReceiveBroadcast[tag](self, tag, key, value);
+        }
+        return axios.post(`${endpoint}/broadcast`, {
+          sender: self,
+          tag,
+          key,
+          value,
+        });
+      })
+    );
   };
-};
 
-export default comm;
+  serverSend = async (self: number, tag: string, endpoint: string, key: string, value: Serializable) => {
+    if (endpoint.indexOf("websocket") !== -1) {
+      return this._wsSend(self, tag, this._getWebSocketID(endpoint), key, value);
+    }
+    return axios.post(`${endpoint}/send`, {
+      sender: self,
+      tag,
+      key,
+      value,
+    });
+  };
+
+  private _getWebSocketID = (websocketEndpoint: string): string => {
+    return websocketEndpoint.split(":")[1];
+  };
+}
+
+export default Comm;

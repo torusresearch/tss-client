@@ -2,23 +2,20 @@ import BN from "bn.js";
 import EC from "elliptic";
 import * as tssLib from "tss-lib";
 
-import methods from "../shared/methods";
-import Round from "../shared/rounds";
+import { PublicParams, TssWorker } from "../interfaces";
+import { Methods, Round } from "../shared";
 import { Client } from "./client";
 import { localStorageDB } from "./db";
 import Network from "./network";
-import { work } from "./worker";
+import TssWebWorker from "./worker";
 
-const round = new Round(work);
-
-const { getGwi, setTagInfo, generateNodeInfo, getPublicParams, tssSign } = methods(round);
 // eslint-disable-next-line new-cap
 const ec = new EC.ec("secp256k1");
 
 interface ITSSSignOptions {
   endpoints: string[];
   numberOfNodes: number;
-  tssImportUrl?: string;
+  tssImportUrl: string;
   wsEndpoints: string[];
 }
 
@@ -29,6 +26,10 @@ export class TssSign {
 
   private _network!: Network;
 
+  private _methods!: Methods;
+
+  private _round!: Round;
+
   private _client!: Client;
 
   private _tag!: string;
@@ -37,9 +38,12 @@ export class TssSign {
     for (let i = 1; i <= this._optns.numberOfNodes; i++) {
       this._parties.push(i);
     }
+    const tssWorker: TssWorker = new TssWebWorker(this._optns.tssImportUrl);
+    this._round = new Round(tssWorker);
     // can be moved to init stage as well
     // need to check for any performance impacts.
     this._network = new Network(this._optns.endpoints, this._optns.wsEndpoints);
+    this._methods = new Methods(this._round);
   }
 
   init = async (privKey: string, tag: string) => {
@@ -58,7 +62,7 @@ export class TssSign {
 
     const partiesAndClient = this._parties.slice();
     partiesAndClient.push(this._parties[this._parties.length - 1] + 1);
-    this._client = new Client(this._optns.numberOfNodes + 1, partiesAndClient, this._network.sockets, round);
+    this._client = new Client(this._optns.numberOfNodes + 1, partiesAndClient, this._network.sockets, this._round);
     this._client.registerTag(tag);
 
     // get public params
@@ -75,15 +79,15 @@ export class TssSign {
 
   sign = async (msgHash: Buffer) => {
     const now = Date.now();
-    await this._client.start(this._tag);
-    await this._network.start(this._tag);
+    await Promise.all([this._client.start(this._tag), this._network.start(this._tag)]);
     await Promise.all([this._network.onlinePhaseCompletionForServer, this._client.ready[this._tag]]);
     const online_phase = Date.now() - now;
     console.log(`Time taken for online phase: ${online_phase / 1e3} seconds`);
-    const data = new BN(msgHash).toString("hex");
+    const data: string = new BN(msgHash).toString("hex");
     const s_is_waiting = this._network.signOnNodes(data, this._tag);
     s_is_waiting.push(this._clientSign(data).then((obj) => obj.s_i));
     const s_is = await Promise.all(s_is_waiting);
+    console.log("s_is_waiting: ", s_is);
     const resp = await this._network.getSignature(s_is, this._tag, data);
     const sig = JSON.parse(resp.data.sig);
     return sig;
@@ -93,34 +97,32 @@ export class TssSign {
    * Load TSS in the environment.
    */
   private _loadTSS = (endpoint?: string) => {
-    // TODO: Add default function to the types.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (tssLib as any).default(endpoint);
+    return tssLib.default(endpoint);
   };
 
   private _generateNodeInfo = (index: number) => {
-    return generateNodeInfo(localStorageDB, "client", index);
+    return this._methods.generateNodeInfo(localStorageDB, "client", index);
   };
 
   private _getPublicParams = async () => {
-    const publicParamsAwaiting: Promise<unknown>[] = this._network.getPublicParamsFromNodes();
-    publicParamsAwaiting.push(getPublicParams(localStorageDB, "client"));
+    const publicParamsAwaiting = this._network.getPublicParamsFromNodes();
+    publicParamsAwaiting.push(this._methods.getPublicParams(localStorageDB, "client"));
     const publicParams = await Promise.all(publicParamsAwaiting);
     return publicParams;
   };
 
   private _getGWIS = async () => {
-    const awaiting: Promise<unknown>[] = this._network.getGWIS(this._tag);
-    awaiting.push(getGwi(localStorageDB, this._tag));
+    const awaiting = this._network.getGWIS(this._tag);
+    awaiting.push(this._methods.getGwi(localStorageDB, this._tag));
     const gwis = await Promise.all(awaiting);
     return gwis;
   };
 
-  private _setTagInfo = (privKey, publicParams, gwis) => {
+  private _setTagInfo = (privKey: string, publicParams: PublicParams[], gwis: string[]) => {
     const pubkey = ec.curve.g.mul(privKey);
     const partiesAndClient = this._parties.slice();
     partiesAndClient.push(this._parties[this._parties.length - 1] + 1);
-    const awaiting: Promise<unknown>[] = this._network.setTagInfoOnNodes({
+    const awaiting = this._network.setTagInfoOnNodes({
       nodes: this._optns.numberOfNodes,
       parties: this._parties,
       pubkey,
@@ -132,7 +134,7 @@ export class TssSign {
     const customEndpoints = this._optns.endpoints.slice();
     customEndpoints.push("websocket:?");
     awaiting.push(
-      setTagInfo(
+      this._methods.setTagInfo(
         localStorageDB,
         "client",
         this._tag,
@@ -151,8 +153,8 @@ export class TssSign {
     return awaiting;
   };
 
-  private _clientSign = async (msg_hash) => {
-    const { s_i, local_sig } = await tssSign(localStorageDB, "client", this._tag, msg_hash);
+  private _clientSign = async (msg_hash: string) => {
+    const { s_i, local_sig } = await this._methods.tssSign(localStorageDB, "client", this._tag, msg_hash);
     return { s_i, local_sig };
   };
 }

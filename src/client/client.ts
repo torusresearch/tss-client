@@ -1,8 +1,7 @@
 import { Socket } from "socket.io-client";
 import * as tssLib from "tss-lib";
 
-import comm from "../shared/comm";
-import Rounds from "../shared/rounds";
+import { Comm, Round } from "../shared";
 import { localStorageDB } from "./db";
 
 export class Client {
@@ -14,9 +13,9 @@ export class Client {
 
   private _selfReceiveBroadcast = {};
 
-  private _comm;
+  private _comm!: Comm;
 
-  constructor(private _index: number, private _parties: number[], private _sockets: Socket[], private _round: Rounds) {
+  constructor(private _index: number, private _parties: number[], private _sockets: Socket[], private _round: Round) {
     _sockets.map((socket) => {
       if (socket.hasListeners("send")) {
         socket.off("send");
@@ -26,7 +25,7 @@ export class Client {
         socket.off("broadcast");
       }
 
-      this._comm = comm(null, null, this._selfReceiveBroadcast);
+      this._comm = new Comm(null, null, this._selfReceiveBroadcast);
 
       // Initialize listeners
       socket.on("send", async (data, cb) => {

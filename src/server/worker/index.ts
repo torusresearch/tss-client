@@ -1,28 +1,38 @@
 import os from "os";
 import { MessageChannel, Worker } from "worker_threads";
 
-const workers = [];
-let workerCounter = 0;
+import { TssWorker } from "../../interfaces";
 
-for (let i = 0; i < os.cpus().length; i++) {
-  const worker = new Worker("./src/server/worker/calc.js");
-  workers.push(worker);
-}
+export default class TssNodeWorker implements TssWorker {
+  private _workers: Worker[] = [];
 
-const workerNum = () => {
-  return workerCounter++ % os.cpus().length;
-};
+  private _workerCounter = 0;
 
-export async function work(method, args) {
-  const workerIndex = workerNum();
-  const worker = workers[workerIndex];
-  const msg = { method, args };
-  const mc = new MessageChannel();
-  const res = new Promise((resolve) => {
-    mc.port1.once("message", ({ data }) => resolve(data));
-  });
-  const ports = [mc.port2];
-  worker.postMessage({ data: msg, ports }, ports);
-  const finalRes = await res;
-  return finalRes;
+  constructor() {
+    this._init();
+  }
+
+  work = (method: string, args: string[]): Promise<unknown> => {
+    const workerIndex = this._workerNum();
+    const worker = this._workers[workerIndex];
+    const msg = { method, args };
+    const mc = new MessageChannel();
+    const res = new Promise((resolve) => {
+      mc.port1.once("message", ({ data }) => resolve(data));
+    });
+    const ports = [mc.port2];
+    worker.postMessage({ data: msg, ports }, ports);
+    return res;
+  };
+
+  private _init = () => {
+    for (let i = 0; i < os.cpus().length; i++) {
+      const worker = new Worker(new URL("./calc.js", import.meta.url));
+      this._workers.push(worker);
+    }
+  };
+
+  private _workerNum = (): number => {
+    return this._workerCounter++ % os.cpus().length;
+  };
 }

@@ -666,7 +666,8 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('wasm/client.wasm', import.meta.url);
+        // input = new URL('wasm/client.wasm', import.meta.url);
+        throw new Error("input can not be undefined");
     }
     const imports = {};
     imports.wbg = {};

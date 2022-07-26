@@ -1,20 +1,18 @@
 import express from "express";
 
-import comm from "../shared/comm";
-import methods from "../shared/methods";
-import Round from "../shared/rounds";
+import { Comm, Methods, Round } from "../shared";
 import fsDB from "./fs_db";
 import { wsBroadcast, wsNotify, wsSend } from "./sockets";
-import { work } from "./worker";
+import TssNodeWorker from "./worker";
 
-const round = new Round(work);
+const round = new Round(new TssNodeWorker());
 
-const { generateNodeInfo, setShare, getGwi, getPublicParams, setTagInfo, tssSign, getSignature, getTimer, resetTimer } = methods(round);
+const methods = new Methods(round);
 
 const port = process.argv[2];
 const router = express.Router();
 const nodeKey = port;
-const { serverBroadcast, serverSend } = comm(wsSend, wsBroadcast, null);
+const { serverBroadcast, serverSend } = new Comm(wsSend, wsBroadcast, null);
 
 const db = fsDB(`${port}`);
 
@@ -84,24 +82,24 @@ router.post("/start", async (req, res) => {
 
 router.get("/generate_node_info/:index", async (req, res) => {
   const { index } = req.params;
-  await generateNodeInfo(db, nodeKey, index);
+  await methods.generateNodeInfo(db, nodeKey, index);
   res.sendStatus(200);
 });
 
 router.post("/share", async (req, res) => {
   const { tag, share } = req.body;
-  await setShare(db, tag, share);
+  await methods.setShare(db, tag, share);
   res.sendStatus(200);
 });
 
 router.get("/gwi/:tag", async (req, res) => {
   const { tag } = req.params;
-  const commitment = await getGwi(db, tag);
+  const commitment = await methods.getGwi(db, tag);
   res.send({ commitment });
 });
 
 router.get("/get_public_params", async (req, res) => {
-  const { h1h2Ntilde, ek } = await getPublicParams(db, nodeKey);
+  const { h1h2Ntilde, ek } = await methods.getPublicParams(db, nodeKey);
   res.send({
     h1h2Ntilde,
     ek,
@@ -111,33 +109,33 @@ router.get("/get_public_params", async (req, res) => {
 router.post("/set_tag_info/:tag", async (req, res) => {
   const { tag } = req.params;
   const { pubkey, endpoints, parties, gwis, eks, h1h2Ntildes } = req.body;
-  await setTagInfo(db, nodeKey, tag, pubkey, endpoints, parties, gwis, eks, h1h2Ntildes);
+  await methods.setTagInfo(db, nodeKey, tag, pubkey, endpoints, parties, gwis, eks, h1h2Ntildes);
   res.sendStatus(200);
 });
 
 router.post("/sign", async (req, res) => {
   const { tag, msg_hash } = req.body;
-  const { s_i } = await tssSign(db, nodeKey, tag, msg_hash);
+  const { s_i } = await methods.tssSign(db, nodeKey, tag, msg_hash);
   res.send({ s_i });
 });
 
 router.post("/get_signature", async (req, res) => {
   const { s_is, tag, msg_hash } = req.body;
   console.log("getting signature", { s_is, msg_hash });
-  const sig = await getSignature(db, nodeKey, tag, s_is, msg_hash);
+  const sig = await methods.getSignature(db, nodeKey, tag, s_is, msg_hash);
   res.send({ sig });
 });
 
 router.post("/get_timer", async (req, res) => {
   console.log("getting timer");
-  const r = await getTimer();
+  const r = await methods.getTimer();
   console.log(r);
   res.send({ r });
 });
 
 router.post("/reset_timer", async (req, res) => {
   console.log("resetting timer");
-  const r = await resetTimer();
+  const r = await methods.resetTimer();
   res.send({ r });
 });
 

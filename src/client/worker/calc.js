@@ -9,11 +9,13 @@
 //     const result = tss[method](...args)
 //     postMessage({ data: result })
 // }
-import tss_lib from "tss-lib";
+// document = {};
+// importScripts("tss_lib.min.js");
+import * as tss from "tss-lib";
 
 onmessage = async ({ data }) => {
-  await p;
-  const { method, args } = data.data;
+  const { method, args, wasmFileUrl } = data.data;
+  await tss.default(wasmFileUrl);
   const result = tss[method](...args);
   postMessage({ data: result });
 };

@@ -1,6 +1,8 @@
 /* eslint-disable prefer-rest-params */
 import * as tssLib from "tss-lib";
 
+import { DB, RoundRunner, TssWorker } from "../interfaces";
+
 const tssProxy = new Proxy(tssLib, {
   get: (target, prop) => {
     if (typeof target[prop] === "function") {
@@ -18,9 +20,9 @@ export default class Rounds {
 
   private _release = null;
 
-  constructor(private _worker) {}
+  constructor(private _worker: TssWorker) {}
 
-  createRoundTracker = (parties, selfIndex) => {
+  createRoundTracker = (parties: number[], selfIndex: number) => {
     const roundTracker = {} as Record<string, unknown>;
 
     // round 1 commitment broadcast
@@ -150,7 +152,7 @@ export default class Rounds {
     wsNotify = (..._args) => {},
     clientReadyResolve = null,
     tss = tssProxy,
-  }) => {
+  }: RoundRunner) => {
     try {
       if (db === undefined || tag === undefined || roundName === undefined) {
         throw new Error(`undefined arguments for roundRunner: ${JSON.stringify({ db, tag, roundName })}`);
@@ -199,12 +201,12 @@ export default class Rounds {
     }
   };
 
-  getTagInfo = async function (db, tag) {
+  getTagInfo = async function (db: DB, tag: string) {
     const tagInfo = await db.get(`tag-${tag}:info`);
     return JSON.parse(tagInfo);
   };
 
-  getRound = (key) => {
+  getRound = (key: string) => {
     const segments = key.split(":");
     if (key.indexOf("start") !== -1) {
       return "round_1_commitment_broadcast";
@@ -353,7 +355,7 @@ export default class Rounds {
         if (p === index.toString()) continue;
         const endpoint = endpoints[i];
         awaiting.push(
-          this._worker("message_A", [k_i, ek, h1h2Ntildes[i]]).then((res) => {
+          this._worker.work("message_A", [k_i, ek, h1h2Ntildes[i]]).then((res) => {
             const [msgA, msgA_randomness] = res;
             return Promise.all([
               db.set(`tag-${tag}:from-${index}:to-${p}:m_a`, msgA),
@@ -405,7 +407,8 @@ export default class Rounds {
     const msgA = await db.get(`tag-${tag}:from-${party}:to-${index}:m_a`);
     let promResolve;
     const prom = new Promise((r) => (promResolve = r));
-    this._worker("message_Bs", [gamma_i, w_i, ek, msgA, h1h2Ntilde])
+    this._worker
+      .work("message_Bs", [gamma_i, w_i, ek, msgA, h1h2Ntilde])
       .then((res) => {
         const [m_b_gamma, beta_gamma, beta_randomness, beta_tag, m_b_w, beta_wi] = res;
         return Promise.all([
@@ -491,7 +494,7 @@ export default class Rounds {
       beta_gammas = await Promise.all(beta_gammas);
       beta_wis = await Promise.all(beta_wis);
 
-      const [delta, sigma] = await this._worker("message_Alphas", [
+      const [delta, sigma] = await this._worker.work("message_Alphas", [
         k_i,
         gamma_i,
         w_i,

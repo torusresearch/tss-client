@@ -8,9 +8,15 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(ts)x?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
+        test: /\.(ts|js)x?$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: "babel-loader",
+          options: {
+            cacheDirectory: true,
+            cacheCompression: false,
+          },
+        },
       },
     ],
   },

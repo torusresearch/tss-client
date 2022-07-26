@@ -5,17 +5,14 @@ import EC from "elliptic";
 import keccak256 from "keccak256";
 import * as tssLib from "tss-lib";
 
-import methods from "../../shared/methods";
-import Round from "../../shared/rounds";
+import Methods from "../../shared/methods";
+import Round from "../../shared/round";
 import { localStorageDB } from "../db";
 import { TssSign } from "../sign";
-import { work } from "../worker";
-
-const round = new Round(work);
+import TssWebWorker from "../worker";
 
 // eslint-disable-next-line new-cap
 const ec = new EC.ec("secp256k1");
-const { setShare } = methods(round);
 
 // let onlinephasestart = process.hrtime();
 
@@ -30,6 +27,10 @@ const parties = [];
 const endpoints = [];
 const wsEndpoints = [];
 const useClient = true;
+const tssImportUrl = "/tss_lib_bg.wasm";
+
+const round = new Round(new TssWebWorker(tssImportUrl));
+const methods = new Methods(round);
 
 const n = 1; // process.argv[2] ? parseInt(process.argv[2]) : 2;
 
@@ -66,7 +67,7 @@ const setupCode = async () => {
     const share = shares[i];
     if (i === n) {
       // useClient is true
-      waiting.push(setShare(localStorageDB, tag, share.toString(16)));
+      waiting.push(methods.setShare(localStorageDB, tag, share.toString(16)));
       continue;
     }
     waiting.push(
@@ -84,11 +85,10 @@ const setupCode = async () => {
 (async () => {
   const timer = `${endpoint_prefix}${base_port + 1}`;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (tssLib as any).default();
+    await tssLib.default(tssImportUrl);
     await setupCode();
 
-    const tssSign = new TssSign({ numberOfNodes: n, endpoints, wsEndpoints });
+    const tssSign = new TssSign({ numberOfNodes: n, endpoints, wsEndpoints, tssImportUrl });
 
     await tssSign.init(privKey, tag);
 
