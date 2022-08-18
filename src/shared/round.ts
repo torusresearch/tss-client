@@ -708,7 +708,7 @@ export default class Rounds {
     this._release();
   }
 
-  private _checkKeys(roundTracker, n) {
+  private _checkKeys(roundTracker: Record<string, unknown>, n: number) {
     for (const key in roundTracker) {
       if (typeof roundTracker[key] === "boolean") continue;
       if (typeof roundTracker[key] === "object") {
@@ -723,7 +723,7 @@ export default class Rounds {
     return true;
   }
 
-  private _allTrue(obj) {
+  private _allTrue(obj: unknown) {
     if (typeof obj !== "object") return false;
     if (obj === null || obj === undefined) return false;
     for (const key in obj) {

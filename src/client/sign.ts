@@ -34,6 +34,8 @@ export class TssSign {
 
   private _tag!: string;
 
+  private _setupCompleteTime!: number;
+
   constructor(private _optns: ITSSSignOptions) {
     for (let i = 1; i <= this._optns.numberOfNodes; i++) {
       this._parties.push(i);
@@ -74,14 +76,16 @@ export class TssSign {
     console.log("publish tag info", Date.now() - now);
     await Promise.all(this._setTagInfo(privKey, publicParams, gwis));
     await Promise.all(this._network.subscribe(this._tag));
-    console.log("setup complete", Date.now() - now);
+    const setupCompleteTime = Date.now() - now;
+    console.log("setup complete", setupCompleteTime);
+    this._setupCompleteTime = setupCompleteTime;
   };
 
   sign = async (msgHash: Buffer) => {
     const now = Date.now();
     await Promise.all([this._client.start(this._tag), this._network.start(this._tag)]);
     await Promise.all([this._network.onlinePhaseCompletionForServer, this._client.ready[this._tag]]);
-    const online_phase = Date.now() - now;
+    const online_phase = this._setupCompleteTime + Date.now() - now;
     console.log(`Time taken for online phase: ${online_phase / 1e3} seconds`);
     const data: string = new BN(msgHash).toString("hex");
     const s_is_waiting = this._network.signOnNodes(data, this._tag);
