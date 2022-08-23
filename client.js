@@ -1,6 +1,7 @@
+import "mock-local-storage";
 const { roundRunner, getRound } = require("./rounds");
-require("mock-local-storage");
-let { tssSign } = require("./methods");
+
+const { tssSign } = require("./methods");
 const localStorageDB = {
   get: (key) =>
     new Promise((r) => {
