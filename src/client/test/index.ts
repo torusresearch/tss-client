@@ -32,7 +32,7 @@ const tssImportUrl = "/tss_lib_bg.wasm";
 const round = new Round(new TssWebWorker(tssImportUrl));
 const methods = new Methods(round);
 
-const n = 1; // process.argv[2] ? parseInt(process.argv[2]) : 2;
+const n = 5; // process.argv[2] ? parseInt(process.argv[2]) : 2;
 
 // generate parties and endpoints
 for (let i = 1; i <= n; i++) {

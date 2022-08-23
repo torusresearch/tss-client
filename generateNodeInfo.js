@@ -1,18 +1,17 @@
-var axios = require("axios");
-var base_port = 8000;
-var endpoint_prefix = "http://localhost:";
+/* eslint-disable @typescript-eslint/no-var-requires */
+const axios = require("axios");
+const base_port = 8000;
+const endpoint_prefix = "http://localhost:";
 
-var parties = [1];
-var endpoints = parties.map(
-  (party) => `${endpoint_prefix}${base_port + parseInt(party)}`
-);
+const parties = [1, 2, 3, 4, 5];
+const endpoints = parties.map((party) => `${endpoint_prefix}${base_port + parseInt(party)}`);
 
 (async () => {
   try {
-    let apiCalls = [];
+    const apiCalls = [];
     for (let i = 0; i < parties.length; i++) {
-      let party = parties[i];
-      let url = `${endpoints[i]}/generate_node_info/${party}`;
+      const party = parties[i];
+      const url = `${endpoints[i]}/generate_node_info/${party}`;
       apiCalls.push(axios.get(url));
     }
     await Promise.all(apiCalls);
