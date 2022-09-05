@@ -586,6 +586,20 @@ module.exports.__wbindgen_cb_drop = function(arg0) {
     return ret;
 };
 
+module.exports.__wbindgen_string_new = function(arg0, arg1) {
+    const ret = getStringFromWasm0(arg0, arg1);
+    return addHeapObject(ret);
+};
+
+module.exports.__wbindgen_string_get = function(arg0, arg1) {
+    const obj = getObject(arg1);
+    const ret = typeof(obj) === 'string' ? obj : undefined;
+    var ptr0 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len0 = WASM_VECTOR_LEN;
+    getInt32Memory0()[arg0 / 4 + 1] = len0;
+    getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+};
+
 module.exports.__wbg_jssendmsg_5fd19809f0c44723 = function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
     try {
         const ret = js_send_msg(getStringFromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0, getStringFromWasm0(arg4, arg5), getStringFromWasm0(arg6, arg7));
@@ -602,11 +616,6 @@ module.exports.__wbindgen_is_falsy = function(arg0) {
     return ret;
 };
 
-module.exports.__wbindgen_string_new = function(arg0, arg1) {
-    const ret = getStringFromWasm0(arg0, arg1);
-    return addHeapObject(ret);
-};
-
 module.exports.__wbindgen_bigint_new = function(arg0, arg1) {
     const ret = BigInt(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
@@ -620,15 +629,6 @@ module.exports.__wbg_jsreadmsg_c78b36111e71b2d6 = function(arg0, arg1, arg2, arg
         wasm.__wbindgen_free(arg0, arg1);
         wasm.__wbindgen_free(arg4, arg5);
     }
-};
-
-module.exports.__wbindgen_string_get = function(arg0, arg1) {
-    const obj = getObject(arg1);
-    const ret = typeof(obj) === 'string' ? obj : undefined;
-    var ptr0 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len0 = WASM_VECTOR_LEN;
-    getInt32Memory0()[arg0 / 4 + 1] = len0;
-    getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
 module.exports.__wbindgen_number_new = function(arg0) {
@@ -857,8 +857,8 @@ module.exports.__wbg_stack_41a23a715c0aee96 = function(arg0, arg1) {
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
-module.exports.__wbindgen_closure_wrapper492 = function(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 106, __wbg_adapter_28);
+module.exports.__wbindgen_closure_wrapper493 = function(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 105, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 

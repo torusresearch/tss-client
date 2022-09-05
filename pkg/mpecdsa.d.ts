@@ -5,24 +5,24 @@
 */
 export function batch_size(): number;
 /**
-* @param {bigint} state
+* @param {string} state
 * @returns {number}
 */
-export function random_generator(state: bigint): number;
+export function random_generator(state: string): number;
 /**
 * @param {number} rng
 */
 export function random_generator_free(rng: number): void;
 /**
 * @param {string} session
-* @param {number} parties
 * @param {number} player_index
+* @param {number} player_count
 * @param {number} threshold
 * @param {string} share
 * @param {string} pubkey
 * @returns {number}
 */
-export function threshold_signer(session: string, parties: number, player_index: number, threshold: number, share: string, pubkey: string): number;
+export function threshold_signer(session: string, player_index: number, player_count: number, threshold: number, share: string, pubkey: string): number;
 /**
 * @param {number} signer
 */
@@ -145,7 +145,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly random_generator: (a: number, b: number) => number;
+  readonly random_generator: (a: number, b: number, c: number) => void;
   readonly random_generator_free: (a: number) => void;
   readonly threshold_signer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
   readonly threshold_signer_free: (a: number) => void;
