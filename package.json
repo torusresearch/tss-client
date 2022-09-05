@@ -10,8 +10,7 @@
     "build:server": "cross-env NODE_ENV=production webpack -c webpack/webpack.server.config.js",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "serve:client": "cross-env NODE_ENV=development webpack serve -c webpack/webpack.client.config.js",
-    "serve:server": "node runServers.js",
-    "setup:server": "node generateNodeInfo.js",
+    "serve:server": "node ./scripts/runServers.js",
     "test": "node test.js"
   },
   "keywords": [],

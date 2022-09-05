@@ -857,12 +857,12 @@ module.exports.__wbg_stack_41a23a715c0aee96 = function(arg0, arg1) {
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
-module.exports.__wbindgen_closure_wrapper492 = function(arg0, arg1, arg2) {
+module.exports.__wbindgen_closure_wrapper491 = function(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 106, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 
-const path = require('path').join(__dirname, 'wasm/server.wasm');
+const path = require('path').join(__dirname, 'mpecdsa_bg.wasm');
 const bytes = require('fs').readFileSync(path);
 
 const wasmModule = new WebAssembly.Module(bytes);

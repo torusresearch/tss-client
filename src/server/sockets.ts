@@ -1,7 +1,5 @@
 import { Server, Socket } from "socket.io";
 
-import { Serializable } from "../interfaces";
-
 const connections: Record<string, Socket> = {};
 const wsPort = process.argv[3];
 
@@ -17,46 +15,34 @@ io.on("connection", (socket) => {
   connections[socket.id] = socket;
 });
 
-export const wsNotify = async (self, tag, webSocketId, key, value) => {
-  const socket = connections[webSocketId];
-  socket.emit("notify", {
-    sender: self,
-    tag,
-    key,
-    value,
-  });
-};
-
-export const wsSend = async (self: string, tag: string, webSocketId: string, key: string, value: Serializable) => {
+export const wsNotify = async (websocketId, player_index, session) => {
   let resolve;
   const p = new Promise((r) => (resolve = r));
-  const socket = connections[webSocketId];
-  console.log(`socket sending message ${key}`);
+  const socket = connections[websocketId];
   socket.emit(
-    "send",
+    "precompute_complete",
     {
-      sender: self,
-      tag,
-      key,
-      value,
+      party: player_index,
+      session,
     },
     resolve
   );
   return p;
 };
 
-export const wsBroadcast = async (self: string, tag: string, webSocketId: string, key: string, value: Serializable) => {
+export const wsSend = async (websocketId, session, self_index, party, msg_type, msg_data) => {
   let resolve;
   const p = new Promise((r) => (resolve = r));
-  const socket = connections[webSocketId];
-  console.log(`socket broadcasting message ${key}`);
+  const socket = connections[websocketId];
+  console.log(`socket sending message ${msg_type}`);
   socket.emit(
-    "broadcast",
+    "send",
     {
-      sender: self,
-      tag,
-      key,
-      value,
+      session,
+      sender: self_index,
+      recipient: party,
+      msg_type,
+      msg_data,
     },
     resolve
   );

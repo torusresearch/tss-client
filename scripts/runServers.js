@@ -1,14 +1,10 @@
-var { spawn } = require("child_process");
-let base_port = 8000;
-let base_ws_port = 18000;
-let n = process.argv[2] ? parseInt(process.argv[2]) : 6;
+const { spawn } = require("child_process");
+const base_port = 8000;
+const base_ws_port = 18000;
+const n = process.argv[2] ? parseInt(process.argv[2]) : 5;
 (async () => {
   for (let i = 1; i <= n; i++) {
-    let tssServer = spawn("node", [
-      "./dist/server.js",
-      `${base_port + i}`,
-      `${base_ws_port + i}`,
-    ]);
+    const tssServer = spawn("node", ["./dist/server.js", `${base_port + i}`, `${base_ws_port + i}`]);
     tssServer.on(
       "exit",
       (function (index) {

@@ -10,10 +10,10 @@ module.exports = {
   entry: "./browser.js",
   target: "web",
   output: {
-    library: { type: "umd", name: "tss_lib" },
+    library: { type: "umd", name: "mpecdsa" },
     path: path.resolve(__dirname, "./dist"),
-    filename: "tss_lib.min.js",
-    assetModuleFilename: 'tss_lib_bg[ext]',
+    filename: "mpecdsa.min.js",
+    assetModuleFilename: 'mpecdsa_bg[ext]',
     publicPath: "/"
   },
   module: {

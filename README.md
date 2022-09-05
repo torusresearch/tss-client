@@ -16,7 +16,6 @@ npm i
 ```
 npm run build:server
 npm run serve:server 1
-npm run setup:server 1
 ```
 
 ### Development

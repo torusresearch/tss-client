@@ -5,12 +5,12 @@
     "wasm/*",
     "node.js",
     "browser.js",
-    "tss_lib.d.ts",
+    "mpecdsa.d.ts",
     "dist/*"
   ],
   "main": "node.js",
-  "browser": "dist/tss_lib.min.js",
-  "types": "tss_lib.d.ts",
+  "browser": "dist/mpecdsa.min.js",
+  "types": "mpecdsa.d.ts",
   "scripts": {
     "clean": "rimraf ./dist",
     "build": "npm run clean && npm run build-tss",

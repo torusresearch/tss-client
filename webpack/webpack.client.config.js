@@ -52,12 +52,12 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         {
-          from: "node_modules/tss-lib/dist/tss_lib.min.js",
+          from: "node_modules/tss-lib/dist/mpecdsa.min.js",
           to: path.resolve(__dirname, "../dist/")
         },
         {
           from: "node_modules/tss-lib/wasm/client.wasm",
-          to: path.resolve(__dirname, "../dist/tss_lib_bg.wasm")
+          to: path.resolve(__dirname, "../dist/mpecdsa_bg.wasm")
         }
       ],
     }),
