@@ -2,9 +2,8 @@ import axios from "axios";
 import * as BN from "bn.js";
 import crypto from "crypto";
 import express from "express";
+import { Server, Socket } from "socket.io";
 import * as tss from "tss-lib";
-
-import { wsNotify, wsSend } from "./sockets";
 
 const router = express.Router();
 
@@ -14,6 +13,74 @@ const rngs = {};
 const msgQueue = [];
 const addressBook = {};
 const precomputes = {};
+
+const connections: Record<string, Socket> = {};
+
+// socket server
+const wsPort = process.argv[3];
+
+const io = new Server(parseInt(wsPort), {
+  cors: {
+    methods: ["GET", "POST"],
+  },
+});
+
+console.log(`websocket on port ${wsPort}`);
+
+io.on("connection", (socket) => {
+  connections[socket.id] = socket;
+  socket.on("send_msg", (payload, cb) => {
+    const { session, sender, recipient, msg_type, msg_data } = payload;
+    console.log("received message on socket", sender, msg_type, msg_data);
+    const pendingRead = globalThis.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
+    if (pendingRead !== undefined) {
+      pendingRead(msg_data);
+    } else {
+      msgQueue.push({
+        session,
+        sender,
+        recipient,
+        msg_type,
+        msg_data,
+      });
+    }
+    if (cb) cb();
+  });
+});
+
+const wsNotify = async (websocketId, player_index, session) => {
+  let resolve;
+  const p = new Promise((r) => (resolve = r));
+  const socket = connections[websocketId];
+  socket.emit(
+    "precompute_complete",
+    {
+      party: player_index,
+      session,
+    },
+    resolve
+  );
+  return p;
+};
+
+const wsSend = async (websocketId, session, self_index, party, msg_type, msg_data) => {
+  let resolve;
+  const p = new Promise((r) => (resolve = r));
+  const socket = connections[websocketId];
+  console.log(`socket sending message ${msg_type}`);
+  socket.emit(
+    "send",
+    {
+      session,
+      sender: self_index,
+      recipient: party,
+      msg_type,
+      msg_data,
+    },
+    resolve
+  );
+  return p;
+};
 
 const _lookupEndpoint = (session, index) => {
   const address = addressBook[`${session}@${index}`];
@@ -28,6 +95,8 @@ const _getWebSocketID = (websocketEndpoint) => {
 };
 
 console.log("server starting");
+
+globalThis.pendingReads = {};
 
 globalThis.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
   try {
@@ -58,13 +127,7 @@ globalThis.js_read_msg = async function (session, self_index, party, msg_type) {
     const mm = msgQueue.find((m) => m.session === session && m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
       return await new Promise((resolve) => {
-        const timer = setInterval(() => {
-          const found = msgQueue.find((m) => m.session === session && m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-          if (found !== undefined) {
-            clearInterval(timer);
-            resolve(found.msg_data);
-          }
-        }, 100);
+        globalThis.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`] = resolve;
       });
     }
     return mm.msg_data;
@@ -73,21 +136,21 @@ globalThis.js_read_msg = async function (session, self_index, party, msg_type) {
     throw new Error(e.toString());
   }
 };
-// router.post("/subscribeReady", async (req, res) => {
-//   const { websocketId, session } = req.body;
-//   readySubscriptions[session] = websocketId;
-//   res.sendStatus(200);
-// });
 
 router.post("/send", async (req, res) => {
   const { session, sender, recipient, msg_type, msg_data } = req.body;
-  msgQueue.push({
-    session,
-    sender,
-    recipient,
-    msg_type,
-    msg_data,
-  });
+  const pendingRead = globalThis.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
+  if (pendingRead !== undefined) {
+    pendingRead(msg_data);
+  } else {
+    msgQueue.push({
+      session,
+      sender,
+      recipient,
+      msg_type,
+      msg_data,
+    });
+  }
   res.sendStatus(200);
 });
 

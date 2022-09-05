@@ -21,7 +21,20 @@ const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-const servers = 1; // process.argv[2] ? parseInt(process.argv[2]) : 2;
+const servers = 2; // process.argv[2] ? parseInt(process.argv[2]) : 2;
+const clientIndex = 2; // Note: parties with higher index tend to read more data than they send, which is good
+const websocketOnly = true;
+
+(window as any).Buffer = Buffer;
+
+// let previousTime = Date.now();
+// let counter = 0;
+// const timer = setInterval(function () {
+//   console.log("counter is ", counter, "time elapsed", Date.now() - previousTime);
+//   previousTime = Date.now();
+//   counter++;
+// }, 100);
+// (window as any).timer = timer;
 
 const getLagrangeCoeff = (parties, party): BN => {
   const partyIndex = new BN(party + 1);
@@ -45,29 +58,8 @@ const getLagrangeCoeff = (parties, party): BN => {
   return delta;
 };
 
-// (async () => {
-//   const parties = [0, 1];
-//   let shares = [
-//     new BN(Buffer.from("4cadd4abcdd91857e3c3e5e6073bd52f3b536fccb9b807dd227b67999456d133", "hex")),
-//     new BN(Buffer.from("e300d528d17abf8cd0b023e04ab83f6c213c6b454821c64404049409ed0bf307", "hex")),
-//   ];
-//   shares = shares.map((share, party) => {
-//     return share.mul(getLagrangeCoeff(parties, party)).umod(ec.curve.n);
-//   });
-//   let sumShares = new BN(0);
-//   shares.map((share) => {
-//     sumShares = sumShares.add(share).umod(ec.curve.n);
-//   });
-//   const pubkey = ec.curve.g.mul(sumShares);
-//   const x = pubkey.getX().toString(16, 64);
-//   const y = pubkey.getY().toString(16, 64);
-//   const pubkeyHex = `${x}${y}`;
-//   const pubKeyb64 = Buffer.from(pubkeyHex, "hex").toString("base64");
-//   console.log("pubkey64", pubKeyb64);
-// })();
-
 // generate n-out-of-n key sharing
-const distributeShares = async (privKey, parties, endpoints) => {
+const distributeShares = async (privKey, parties, endpoints, localClientIndex) => {
   const additiveShares = [];
   let shareSum = new BN(0);
   for (let i = 0; i < parties.length - 1; i++) {
@@ -100,7 +92,7 @@ const distributeShares = async (privKey, parties, endpoints) => {
   const waiting = [];
   for (let i = 0; i < parties.length; i++) {
     const share = shares[i];
-    if (i === parties.length - 1) {
+    if (i === localClientIndex) {
       waiting.push(localStorageDB.set(`session-${session}:share`, Buffer.from(share.toString(16, 64), "hex").toString("base64")));
       continue;
     }
@@ -132,17 +124,21 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   // try {
   // generate parties and endpoints
 
-  // generate endpoints for servers
-  for (let i = 0; i < servers; i++) {
-    parties.push(i);
-    endpoints.push(`${endpoint_prefix}${base_port + i + 1}`);
-    tssWSEndpoints.push(`${ws_prefix}${base_ws_port + i + 1}`);
-  }
-
   // generate for local
-  parties.push(servers);
-  endpoints.push(null);
-  tssWSEndpoints.push(null);
+
+  // generate endpoints for servers
+  let serverPortOffset = 1;
+  for (let i = 0; i < servers + 1; i++) {
+    parties.push(i);
+    if (i === clientIndex) {
+      endpoints.push(null);
+      tssWSEndpoints.push(null);
+    } else {
+      endpoints.push(`${endpoint_prefix}${base_port + serverPortOffset}`);
+      tssWSEndpoints.push(`${ws_prefix}${base_ws_port + serverPortOffset}`);
+      serverPortOffset++;
+    }
+  }
 
   // generate private key and public key
   const privKey = new BN(eccrypto.generatePrivate());
@@ -155,18 +151,30 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   console.log("pubkey", pubKey);
 
   // distribute shares to servers and local device
-  await distributeShares(privKey, parties, endpoints);
+  await distributeShares(privKey, parties, endpoints, clientIndex);
 
   // create websockets
   const sockets = await createSockets(tssWSEndpoints);
 
-  await new Promise((r) => setTimeout(r, 1000));
+  // wait for websockets to be connected
+  await new Promise((resolve) => {
+    const checkConnectionTimer = setInterval(() => {
+      for (let i = 0; i < sockets.length; i++) {
+        if (sockets[i] !== null && !sockets[i].connected) return;
+      }
+      clearInterval(checkConnectionTimer);
+      resolve(true);
+    }, 100);
+  });
 
   // load tss library;
   await tss.default(tssImportUrl);
 
   const share = await localStorageDB.get(`session-${session}:share`);
-  const client = new Client(session, servers, parties, endpoints, sockets, share, pubKey);
+  const client = new Client(session, clientIndex, parties, endpoints, sockets, share, pubKey, websocketOnly);
+  (window as any).client = client;
+
+  global.startTime = Date.now();
 
   client.precompute(tss);
   await client.ready();
@@ -185,6 +193,8 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   const passed = ec.verify(msgHash, signature, pubk);
 
   console.log("passed: ", passed);
+  global.endTime = Date.now();
+  console.log("time elapsed", global.endTime - global.startTime);
 
   // console.log(`Time taken for offline phase: ${(Date.now() - now - online_phase) / 1e3} seconds`);
   // } catch (e) {

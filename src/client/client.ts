@@ -11,37 +11,57 @@ if (global.tss_clients === undefined) {
   global.tss_clients = {};
 }
 
-if (global.js_send_msg === undefined) {
-  global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
-    const tss_client = global.tss_clients[session] as Client;
-    const endpoint = tss_client.lookupEndpoint(session, party);
-    await axios.post(`${endpoint}/send`, {
-      session,
-      sender: self_index,
-      recipient: party,
-      msg_type,
-      msg_data,
-    });
-    return true;
-  };
+if (global.js_pending_reads === undefined) {
+  global.js_pending_reads = {};
 }
+
+global.total_outgoing = 0;
+global.total_outgoing_msg = [];
+global.total_incoming = 0;
+global.total_incoming_msg = [];
 
 if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
+    console.log("reading msg", msg_type);
     const tss_client = global.tss_clients[session] as Client;
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
       return new Promise((resolve) => {
-        const timer = setInterval(() => {
-          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-          if (found !== undefined) {
-            clearInterval(timer);
-            resolve(found.msg_data);
-          }
-        }, 100);
+        tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`] = resolve;
       });
     }
+    // global.total_incoming += mm.msg_data.length;
+    // global.total_incoming_msg.push(mm.msg_data);
     return mm.msg_data;
+  };
+}
+
+if (global.js_send_msg === undefined) {
+  global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
+    console.log("sending msg", msg_type);
+    // global.total_outgoing += msg_data.length;
+    // global.total_outgoing_msg.push(msg_data);
+    const tss_client = global.tss_clients[session] as Client;
+    if (tss_client.websocketOnly) {
+      const socket = tss_client.sockets[party];
+      socket.emit("send_msg", {
+        session,
+        sender: self_index,
+        recipient: party,
+        msg_type,
+        msg_data,
+      });
+    } else {
+      const endpoint = tss_client.lookupEndpoint(session, party);
+      axios.post(`${endpoint}/send`, {
+        session,
+        sender: self_index,
+        recipient: party,
+        msg_type,
+        msg_data,
+      });
+    }
+    return true;
   };
 }
 
@@ -54,6 +74,8 @@ export class Client {
 
   public msgQueue: Msg[] = [];
 
+  public pendingReads = {};
+
   public sockets: Socket[];
 
   public endpoints: string[];
@@ -64,6 +86,8 @@ export class Client {
 
   public precomputes: string[] = [];
 
+  public websocketOnly: boolean;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
@@ -73,7 +97,16 @@ export class Client {
   private _ready: boolean;
 
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
-  constructor(_session: string, _index: number, _parties: number[], _endpoints: string[], _sockets: Socket[], _share: string, _pubKey: string) {
+  constructor(
+    _session: string,
+    _index: number,
+    _parties: number[],
+    _endpoints: string[],
+    _sockets: Socket[],
+    _share: string,
+    _pubKey: string,
+    _websocketOnly: boolean
+  ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, fill with nulls if necessary");
     }
@@ -84,13 +117,19 @@ export class Client {
     this.session = _session;
     this.index = _index;
     this.parties = _parties;
-    this.sockets = _sockets;
     this.endpoints = _endpoints;
+    this.sockets = _sockets;
     this.share = _share;
     this.pubKey = _pubKey;
+    this.websocketOnly = _websocketOnly;
 
     _sockets.map((socket) => {
-      if (socket === undefined || socket === null) return;
+      if (socket === undefined || socket === null) {
+        let clientResolve;
+        this._readyPromises.push(new Promise((r) => (clientResolve = r)));
+        this._readyResolves.push(clientResolve);
+        return;
+      }
       if (socket.hasListeners("send")) {
         socket.off("send");
       }
@@ -105,21 +144,26 @@ export class Client {
         const { session, sender, recipient, msg_type, msg_data } = data;
         if (session !== this.session) {
           console.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
-          cb();
           return;
         }
-        this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
-        console.log(`receiving send ${msg_type}`);
-        cb();
+        const pendingRead = this.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
+        if (pendingRead !== undefined) {
+          // global.total_incoming += msg_data.length;
+          // global.total_incoming_msg.push(msg_data);
+          pendingRead(msg_data);
+        } else {
+          this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
+        }
+        if (cb) cb();
       });
       // Add listener for completion
       socket.on("precompute_complete", async (data, cb) => {
         const { session, party } = data;
         if (session !== this.session) {
           console.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
-          cb();
+          return;
         }
-        cb();
+        if (cb) cb();
         const { precompute } = await axios
           .post(`${this.lookupEndpoint(this.session, party)}/retrieve_precompute`, { session })
           .then((res) => res.data);
@@ -127,11 +171,6 @@ export class Client {
         resolve();
       });
     });
-
-    // create pending promise that resolves when our local client complete precompute
-    let resolve;
-    this._readyPromises.push(new Promise((r) => (resolve = r)));
-    this._readyResolves.push(resolve);
 
     this._readyPromiseAll = Promise.all(this._readyPromises).then(() => {
       this._ready = true;
@@ -145,7 +184,7 @@ export class Client {
   }
 
   precompute(tss: typeof TssLib) {
-    const signer = tss.threshold_signer(this.session, this.parties.length - 1, this.parties.length, this.parties.length, this.share, this.pubKey);
+    const signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
     // const rng = tss.random_generator(BigInt(`0x${generatePrivate().toString("hex")}`));
     const rng = tss.random_generator(new BN(generatePrivate()).umod(new BN("18446744073709551615")).toString("hex"));
     // const rng = tss.random_generator("00");
@@ -176,6 +215,7 @@ export class Client {
           threshold: this.parties.length,
           pubkey: this.pubKey,
           notifyWebsocketId: this.sockets[party].id,
+          sendWebsocket: this.sockets[party].id,
         });
       }
     }
