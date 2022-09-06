@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run build:server && npm run serve:server",
     "clean": "rimraf ./dist",
-    "build": "cross-env NODE_ENV=production webpack --progress",
+    "build": "npm run build:server",
     "build:client": "cross-env NODE_ENV=production webpack -c webpack/webpack.client.config.js",
     "build:server": "cross-env NODE_ENV=production webpack -c webpack/webpack.server.config.js",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
