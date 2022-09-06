@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npm run build:server && npm run serve:server",
+    "start": "npm run build:server && node ./dist/server.js",
     "clean": "rimraf ./dist",
     "build": "npm run build:server",
     "build:client": "cross-env NODE_ENV=production webpack -c webpack/webpack.client.config.js",
