@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npm run build:server && node ./dist/server.js",
+    "start": "node ./dist/server.js",
     "clean": "rimraf ./dist",
-    "build": "npm run build:server",
+    "build": "NODE_ENV=production webpack -c webpack/webpack.server.config.js",
     "build:client": "cross-env NODE_ENV=production webpack -c webpack/webpack.client.config.js",
     "build:server": "cross-env NODE_ENV=production webpack -c webpack/webpack.server.config.js",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
