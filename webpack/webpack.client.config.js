@@ -65,6 +65,7 @@ module.exports = {
   devServer: {
     port: 4000,
     open: true,
+    disableHostCheck: true,
     static: [
       {
         directory: path.join(__dirname, '../public'),
