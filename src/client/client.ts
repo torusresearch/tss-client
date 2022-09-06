@@ -5,6 +5,7 @@ import { Socket } from "socket.io-client";
 import * as TssLib from "tss-lib";
 
 import { Msg } from "../shared";
+import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
 if (global.tss_clients === undefined) {
@@ -39,8 +40,10 @@ if (global.js_read_msg === undefined) {
   };
 }
 
-global.process_ga1 = async (tss: typeof TssLib, msg_data: string): Promise<string> => {
-  const res = tss.process_ga1(msg_data);
+global.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
+  const worker = new TssWebWorker(tssImportUrl);
+  // const res = tss.process_ga1(msg_data);
+  const res = worker.work<string>("process_ga1", [msg_data]);
   return res;
 };
 
@@ -49,8 +52,9 @@ if (global.js_send_msg === undefined) {
     console.log("sending msg", msg_type);
     const tss_client = global.tss_clients[session] as Client;
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      global.process_ga1(tss_client._tssLib, msg_data).then((processed_data) => {
-        const pendingRead = tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-ga1_data_processed`];
+      global.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
+        const pendingRead =
+          tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`];
         if (pendingRead !== undefined) {
           pendingRead(processed_data);
         } else {
@@ -116,6 +120,8 @@ export class Client {
 
   public _tssLib: typeof TssLib; // TODO: only necessary for ga1_array processing
 
+  public tssImportUrl: string;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
@@ -133,7 +139,8 @@ export class Client {
     _sockets: Socket[],
     _share: string,
     _pubKey: string,
-    _websocketOnly: boolean
+    _websocketOnly: boolean,
+    _tssImportUrl: string
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, fill with nulls if necessary");
@@ -150,6 +157,7 @@ export class Client {
     this.share = _share;
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
+    this.tssImportUrl = _tssImportUrl;
 
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
