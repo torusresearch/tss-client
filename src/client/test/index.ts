@@ -22,9 +22,6 @@ const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-const servers = parseInt((document.getElementById("servers") as any).value);
-const clientIndex = servers; // Note: parties with higher index tend to read more data than they send, which is good
-const websocketOnly = (document.getElementById("websocket-send") as any).value === "y";
 
 (window as any).Buffer = Buffer;
 
@@ -119,6 +116,10 @@ const tssTest = async () => {
   // const parties = [0, 1];
   // const endpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
   // const tssWSEndpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
+
+  const servers = parseInt((document.getElementById("servers") as any).value);
+  const clientIndex = servers; // Note: parties with higher index tend to read more data than they send, which is good
+  const websocketOnly = (document.getElementById("websocket-send") as any).value === "y";
 
   const parties: number[] = [];
   const endpoints = [];
