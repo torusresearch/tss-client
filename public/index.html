@@ -21,8 +21,7 @@
     <div>
       <label for="region">Cluster region: </label>
       <select name="region" id="region">
-        <option value="australia" selected>Australia</option>
-        <option value="us">US</option>
+        <option value="sg" selected>Singapore</option>
       </select>
     </div>
     <div>
@@ -32,28 +31,22 @@
         <option value="n">No</option>
       </select>
     </div>
-    <div>
+    <!-- <div>
       <label for="websocket-send">Use web worker for elliptic op?</label>
       <select name="websocket-send" id="websocket-send">
         <option value="y">Yes</option>
         <option value="n" selected>No</option>
       </select>
-    </div>
-    <div>
-      <label for="websocket-send">Verbose output:</label>
-      <select name="websocket-send" id="websocket-send">
-        <option value="y">Yes</option>
-        <option value="n" selected>No</option>
-      </select>
-    </div>
+    </div> -->
     <br/>
-    <button>Run!</button>
+    <button id="run" onclick="tssTest()">Run!</button>
+    <button onclick="window.location.reload()">Reset</button>
     <br/>
-    <div>
+    <!-- <div>
       Output:
       <ul>
       </ul>
-    </div>
+    </div> -->
 
     <br/>
     <a href="https://etherscan.io/address/0x71d91a8988D81617be53427126ee62471321b7DF#readContract">verify</a>

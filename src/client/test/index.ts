@@ -14,17 +14,17 @@ import { localStorageDB } from "../db";
 const ec = new EC.ec("secp256k1");
 
 // CONSTANTS
-const base_port = 8000;
-const base_ws_port = 8000;
-const endpoint_prefix = "http://localhost:";
-const ws_prefix = "ws://localhost:";
+// const base_port = 8000;
+// const base_ws_port = 8000;
+// const endpoint_prefix = "http://localhost:";
+// const ws_prefix = "ws://localhost:";
 const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-const servers = 3;
-const clientIndex = 3; // Note: parties with higher index tend to read more data than they send, which is good
-const websocketOnly = true;
+const servers = parseInt((document.getElementById("servers") as any).value);
+const clientIndex = servers; // Note: parties with higher index tend to read more data than they send, which is good
+const websocketOnly = (document.getElementById("websocket-send") as any).value === "y";
 
 (window as any).Buffer = Buffer;
 
@@ -115,7 +115,11 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   });
 };
 
-(async () => {
+const tssTest = async () => {
+  // const parties = [0, 1];
+  // const endpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
+  // const tssWSEndpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
+
   const parties: number[] = [];
   const endpoints = [];
   const tssWSEndpoints = [];
@@ -123,6 +127,8 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   // generate parties and endpoints
 
   // generate for local
+
+  const region = "sg";
 
   // generate endpoints for servers
   let serverPortOffset = 1;
@@ -132,8 +138,10 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else {
-      endpoints.push(`${endpoint_prefix}${base_port + serverPortOffset}`);
-      tssWSEndpoints.push(`${ws_prefix}${base_ws_port + serverPortOffset}`);
+      // endpoints.push(`${endpoint_prefix}${base_port + serverPortOffset}`);
+      endpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
+      // tssWSEndpoints.push(`${ws_prefix}${base_ws_port + serverPortOffset}`);
+      tssWSEndpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
       serverPortOffset++;
     }
   }
@@ -190,22 +198,15 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
-  console.log(
-    "msgHash",
-    `0x${msgHash.toString("hex")}`,
-    "signature",
-    `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`,
-    "address",
-    `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`
-  );
+  console.log("msgHash", `0x${msgHash.toString("hex")}`);
+  console.log("signature", `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`);
+  console.log("address", `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 
   console.log("passed: ", passed);
   global.endTime = Date.now();
   console.log("time elapsed", global.endTime - global.startTime);
+  (window as any).document.getElementById("run").setAttribute("disabled", true);
+};
 
-  // console.log(`Time taken for offline phase: ${(Date.now() - now - online_phase) / 1e3} seconds`);
-  // } catch (e) {
-  //   console.error(e);
-  // }
-})();
+(window as any).tssTest = tssTest;
