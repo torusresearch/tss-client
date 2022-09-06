@@ -1,6 +1,11 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+* @param {string} data
+* @returns {string}
+*/
+export function process_ga1(data: string): string;
+/**
 * @returns {number}
 */
 export function batch_size(): number;
@@ -145,6 +150,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly process_ga1: (a: number, b: number, c: number) => void;
   readonly random_generator: (a: number, b: number, c: number) => void;
   readonly random_generator_free: (a: number) => void;
   readonly threshold_signer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;

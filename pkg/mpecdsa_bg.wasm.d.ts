@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export function process_ga1(a: number, b: number, c: number): void;
 export function random_generator(a: number, b: number, c: number): void;
 export function random_generator_free(a: number): void;
 export function threshold_signer(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number): void;
