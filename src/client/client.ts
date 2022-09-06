@@ -15,14 +15,17 @@ if (global.js_pending_reads === undefined) {
   global.js_pending_reads = {};
 }
 
-global.total_outgoing = 0;
-global.total_outgoing_msg = [];
-global.total_incoming = 0;
-global.total_incoming_msg = [];
+// global.total_outgoing = 0;
+// global.total_outgoing_msg = [];
+// global.total_incoming = 0;
+// global.total_incoming_msg = [];
 
 if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
-    console.log("reading msg", msg_type);
+    // console.log("reading msg", msg_type);
+    if (msg_type === "ga1_worker_support") {
+      return "not_supported";
+    }
     const tss_client = global.tss_clients[session] as Client;
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -36,12 +39,35 @@ if (global.js_read_msg === undefined) {
   };
 }
 
+global.process_ga1 = async (tss: typeof TssLib, msg_data: string): Promise<string> => {
+  const res = tss.process_ga1(msg_data);
+  return res;
+};
+
 if (global.js_send_msg === undefined) {
   global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
     console.log("sending msg", msg_type);
+    const tss_client = global.tss_clients[session] as Client;
+    if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
+      global.process_ga1(tss_client._tssLib, msg_data).then((processed_data) => {
+        const pendingRead = tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-ga1_data_processed`];
+        if (pendingRead !== undefined) {
+          pendingRead(processed_data);
+        } else {
+          tss_client.msgQueue.push({
+            session,
+            sender: party,
+            recipient: self_index,
+            msg_type: `${session}~ga1_data_processed`,
+            msg_data: processed_data,
+          });
+        }
+        return true;
+      });
+      return true;
+    }
     // global.total_outgoing += msg_data.length;
     // global.total_outgoing_msg.push(msg_data);
-    const tss_client = global.tss_clients[session] as Client;
     if (tss_client.websocketOnly) {
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
@@ -87,6 +113,8 @@ export class Client {
   public precomputes: string[] = [];
 
   public websocketOnly: boolean;
+
+  public _tssLib: typeof TssLib; // TODO: only necessary for ga1_array processing
 
   private _readyResolves = [];
 
@@ -179,6 +207,10 @@ export class Client {
     global.tss_clients[this.session] = this;
   }
 
+  registerTssLib(tssLib: typeof TssLib) {
+    this._tssLib = tssLib;
+  }
+
   async ready() {
     await this._readyPromiseAll;
   }
@@ -244,7 +276,6 @@ export class Client {
       sigFragments.push(tss.local_sign(msg, hash_only, precompute));
     }
 
-    console.log("this.pubkey", this.pubKey);
     return tss.local_verify(msg, hash_only, tss.get_r_from_precompute(this.precomputes[0]), sigFragments, this.pubKey);
   }
 

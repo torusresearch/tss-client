@@ -21,8 +21,8 @@ const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-const servers = 2; // process.argv[2] ? parseInt(process.argv[2]) : 2;
-const clientIndex = 2; // Note: parties with higher index tend to read more data than they send, which is good
+const servers = 5; // process.argv[2] ? parseInt(process.argv[2]) : 2;
+const clientIndex = 5; // Note: parties with higher index tend to read more data than they send, which is good
 const websocketOnly = true;
 
 (window as any).Buffer = Buffer;
@@ -172,6 +172,7 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
 
   const share = await localStorageDB.get(`session-${session}:share`);
   const client = new Client(session, clientIndex, parties, endpoints, sockets, share, pubKey, websocketOnly);
+  client.registerTssLib(tss);
   (window as any).client = client;
 
   global.startTime = Date.now();

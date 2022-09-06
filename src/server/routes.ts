@@ -2,10 +2,13 @@ import axios from "axios";
 import * as BN from "bn.js";
 import crypto from "crypto";
 import express from "express";
-import { Server, Socket } from "socket.io";
+// import * as http from "http";
+import * as socketio from "socket.io";
 import * as tss from "tss-lib";
 
+// const server = http.createServer(app);
 const router = express.Router();
+// app.use("/", router);
 
 const shares = {};
 const signers = {};
@@ -14,16 +17,22 @@ const msgQueue = [];
 const addressBook = {};
 const precomputes = {};
 
-const connections: Record<string, Socket> = {};
+const connections: Record<string, socketio.Socket> = {};
 
 // socket server
 const wsPort = process.argv[3];
 
-const io = new Server(parseInt(wsPort), {
+const io = new socketio.Server(parseInt(wsPort), {
   cors: {
     methods: ["GET", "POST"],
   },
 });
+
+// const io = new socketio.Server(server, {
+//   cors: {
+//     methods: ["GET", "POST"],
+//   },
+// });
 
 console.log(`websocket on port ${wsPort}`);
 
@@ -31,7 +40,7 @@ io.on("connection", (socket) => {
   connections[socket.id] = socket;
   socket.on("send_msg", (payload, cb) => {
     const { session, sender, recipient, msg_type, msg_data } = payload;
-    console.log("received message on socket", sender, msg_type, msg_data);
+    // console.log("received message on socket", sender, msg_type, msg_data);
     const pendingRead = globalThis.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
     if (pendingRead !== undefined) {
       pendingRead(msg_data);
@@ -67,7 +76,7 @@ const wsSend = async (websocketId, session, self_index, party, msg_type, msg_dat
   let resolve;
   const p = new Promise((r) => (resolve = r));
   const socket = connections[websocketId];
-  console.log(`socket sending message ${msg_type}`);
+  // console.log(`socket sending message ${msg_type}`);
   socket.emit(
     "send",
     {
@@ -100,9 +109,9 @@ globalThis.pendingReads = {};
 
 globalThis.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
   try {
-    console.log("sending message", party, msg_type, msg_data);
+    // console.log("sending message", party, msg_type, msg_data);
     const endpoint = _lookupEndpoint(session, party);
-    console.log("endpoint is ", endpoint);
+    // console.log("endpoint is ", endpoint);
     if (endpoint.indexOf("websocket") !== -1) {
       await wsSend(_getWebSocketID(endpoint), session, self_index, party, msg_type, msg_data);
       return true;
@@ -122,7 +131,8 @@ globalThis.js_send_msg = async function (session, self_index, party, msg_type, m
 };
 
 globalThis.js_read_msg = async function (session, self_index, party, msg_type) {
-  console.log("reading message", party, msg_type);
+  // console.log("reading message", party, msg_type);
+  if (msg_type === "ga1_worker_support") return "not supported";
   try {
     const mm = msgQueue.find((m) => m.session === session && m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -166,7 +176,7 @@ router.post("/precompute", async (req, res) => {
   for (let i = 0; i < endpoints.length; i++) {
     addressBook[`${session}@${i}`] = endpoints[i];
   }
-  console.log("what is precompute params", session, parties, player_index, threshold, pubkey);
+  // console.log("what is precompute params", session, parties, player_index, threshold, pubkey);
   const share = shares[session];
   if (share === undefined) {
     res.statusMessage = `Share not found for session ${session}`;
