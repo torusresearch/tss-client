@@ -1,6 +1,6 @@
 const { spawn } = require("child_process");
 const base_port = 8000;
-const base_ws_port = 18000;
+const base_ws_port = 8000;
 const n = process.argv[2] ? parseInt(process.argv[2]) : 5;
 (async () => {
   for (let i = 1; i <= n; i++) {

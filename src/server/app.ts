@@ -1,8 +1,8 @@
 import cors from "cors";
 import express from "express";
 
-// import registerRoutes from "./routes";
-import router from "./routes";
+import registerRoutes from "./routes";
+// import router from "./routes";
 
 const app = express();
 
@@ -13,6 +13,8 @@ app.use(cors());
 // app.use(express.static("dist"));
 
 // export default registerRoutes(app);
-app.use("/", router);
+// app.use("/", router);
 
-export default app;
+export default registerRoutes(app);
+
+// export default app;

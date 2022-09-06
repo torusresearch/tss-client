@@ -22,7 +22,7 @@ if (global.js_pending_reads === undefined) {
 
 if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
-    // console.log("reading msg", msg_type);
+    console.log("reading msg", msg_type);
     if (msg_type === "ga1_worker_support") {
       return "not_supported";
     }

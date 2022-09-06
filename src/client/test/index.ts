@@ -14,7 +14,7 @@ const ec = new EC.ec("secp256k1");
 
 // CONSTANTS
 const base_port = 8000;
-const base_ws_port = 18000;
+const base_ws_port = 8000;
 const endpoint_prefix = "http://localhost:";
 const ws_prefix = "ws://localhost:";
 const msg = "hello world";
@@ -44,7 +44,6 @@ const getLagrangeCoeff = (parties, party): BN => {
     const otherParty = parties[i];
     const otherPartyIndex = new BN(parties[i] + 1);
     if (party !== otherParty) {
-      console.log(party, otherParty, i);
       upper = upper.mul(otherPartyIndex.neg());
       upper = upper.umod(ec.curve.n);
       let temp = partyIndex.sub(otherPartyIndex);
@@ -54,7 +53,6 @@ const getLagrangeCoeff = (parties, party): BN => {
   }
 
   const delta = upper.mul(lower.invm(ec.curve.n)).umod(ec.curve.n);
-  console.log(delta.toString(16));
   return delta;
 };
 
@@ -87,7 +85,6 @@ const distributeShares = async (privKey, parties, endpoints, localClientIndex) =
     "shares",
     shares.map((s) => s.toString(16, 64))
   );
-  shares.map((share) => console.log(Buffer.from(share.toString(16, 64), "hex").toString("base64")));
 
   const waiting = [];
   for (let i = 0; i < parties.length; i++) {
