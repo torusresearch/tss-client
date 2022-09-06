@@ -12,6 +12,18 @@ import { localStorageDB } from "../db";
 
 // eslint-disable-next-line new-cap
 const ec = new EC.ec("secp256k1");
+const consolelog = function (...args) {
+  let msg = "";
+  args.map((arg) => {
+    msg += JSON.stringify(arg);
+    msg += " ";
+  });
+  const ul = (window as any).document.getElementById("output");
+  const li = document.createElement("li");
+  li.appendChild(document.createTextNode(msg));
+  ul.appendChild(li);
+};
+global.consolelog = consolelog;
 
 // CONSTANTS
 // const base_port = 8000;
@@ -24,15 +36,6 @@ const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
 
 (window as any).Buffer = Buffer;
-
-// let previousTime = Date.now();
-// let counter = 0;
-// const timer = setInterval(function () {
-//   console.log("counter is ", counter, "time elapsed", Date.now() - previousTime);
-//   previousTime = Date.now();
-//   counter++;
-// }, 100);
-// (window as any).timer = timer;
 
 const getLagrangeCoeff = (parties, party): BN => {
   const partyIndex = new BN(party + 1);
@@ -71,7 +74,7 @@ const distributeShares = async (privKey, parties, endpoints, localClientIndex) =
   if (reduced.toString(16) !== privKey.toString(16)) {
     throw new Error("additive shares dont sum up to private key");
   } else {
-    console.log("additive shares add up to private key");
+    global.consolelog("additive shares add up to private key");
   }
 
   // denormalise shares
@@ -79,7 +82,7 @@ const distributeShares = async (privKey, parties, endpoints, localClientIndex) =
     return additiveShare.mul(getLagrangeCoeff(parties, party).invm(ec.curve.n)).umod(ec.curve.n);
   });
 
-  console.log(
+  global.consolelog(
     "shares",
     shares.map((s) => s.toString(16, 64))
   );
@@ -156,7 +159,7 @@ const tssTest = async () => {
   const pubKeyHex = `${pubKeyX}${pubKeyY}`;
   const pubKey = Buffer.from(pubKeyHex, "hex").toString("base64");
 
-  console.log("pubkey", pubKey);
+  global.consolelog("pubkey", pubKey);
 
   // distribute shares to servers and local device
   await distributeShares(privKey, parties, endpoints, clientIndex);
@@ -188,25 +191,25 @@ const tssTest = async () => {
   client.precompute(tss);
   await client.ready();
   const sig = client.sign(tss, msgHash.toString("base64"), true);
-  console.log("sig ", sig);
+  global.consolelog("sig ", sig);
 
   const sigHex = Buffer.from(sig, "base64").toString("hex");
   const r = new BN(sigHex.slice(0, 64), 16);
   const s = new BN(sigHex.slice(64), 16);
   const signature = { r, s, recoveryParam: 0 };
-  console.log("what is r", r);
+  global.consolelog("what is r", r);
 
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
-  console.log("msgHash", `0x${msgHash.toString("hex")}`);
-  console.log("signature", `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`);
-  console.log("address", `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
+  global.consolelog("msgHash", `0x${msgHash.toString("hex")}`);
+  global.consolelog("signature", `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`);
+  global.consolelog("address", `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 
-  console.log("passed: ", passed);
+  global.consolelog("passed: ", passed);
   global.endTime = Date.now();
-  console.log("time elapsed", global.endTime - global.startTime);
+  global.consolelog("time elapsed", global.endTime - global.startTime);
   (window as any).document.getElementById("run").setAttribute("disabled", true);
 };
 

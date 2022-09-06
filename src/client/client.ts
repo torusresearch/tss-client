@@ -23,7 +23,7 @@ if (global.js_pending_reads === undefined) {
 
 if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
-    console.log("reading msg", msg_type);
+    global.consolelog("reading msg", msg_type);
     if (msg_type === "ga1_worker_support") {
       return "supported";
     }
@@ -49,7 +49,7 @@ global.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<str
 
 if (global.js_send_msg === undefined) {
   global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
-    console.log("sending msg", msg_type);
+    global.consolelog("sending msg", msg_type);
     const tss_client = global.tss_clients[session] as Client;
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
       global.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
@@ -179,7 +179,7 @@ export class Client {
       socket.on("send", async (data, cb) => {
         const { session, sender, recipient, msg_type, msg_data } = data;
         if (session !== this.session) {
-          console.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          global.consolelog(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
         const pendingRead = this.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
@@ -196,7 +196,7 @@ export class Client {
       socket.on("precompute_complete", async (data, cb) => {
         const { session, party } = data;
         if (session !== this.session) {
-          console.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          global.consolelog(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
         if (cb) cb();
