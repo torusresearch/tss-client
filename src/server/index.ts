@@ -1,6 +1,6 @@
 import app from "./app";
 
-const port = process.argv[2] || process.env.PORT;
+const port = process.env.PORT || process.argv[2];
 if (!port) {
   throw new Error("port not specified");
 }

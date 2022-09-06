@@ -21,7 +21,7 @@ const registerRoutes = function (app) {
   const connections: Record<string, socketio.Socket> = {};
 
   // socket server
-  const wsPort = process.argv[3] || process.env.PORT;
+  const wsPort = process.env.PORT || process.argv[3];
 
   // const io = new socketio.Server(parseInt(wsPort), {
   //   cors: {
