@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "npm run build:server && npm run serve:server",
     "clean": "rimraf ./dist",
     "build": "cross-env NODE_ENV=production webpack",
     "build:client": "cross-env NODE_ENV=production webpack -c webpack/webpack.client.config.js",
@@ -28,6 +29,7 @@
     "eccrypto": "^1.1.6",
     "elliptic": "^6.5.4",
     "esmify": "^2.1.1",
+    "ethereumjs-utils": "^5.2.5",
     "express": "^4.18.1",
     "keccak256": "^1.0.6",
     "mock-local-storage": "^1.1.23",

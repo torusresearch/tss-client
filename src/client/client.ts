@@ -24,7 +24,7 @@ if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
     console.log("reading msg", msg_type);
     if (msg_type === "ga1_worker_support") {
-      return "not_supported";
+      return "supported";
     }
     const tss_client = global.tss_clients[session] as Client;
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);

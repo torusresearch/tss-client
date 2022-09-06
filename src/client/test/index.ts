@@ -2,6 +2,7 @@ import axios from "axios";
 import BN from "bn.js";
 import eccrypto from "eccrypto";
 import EC from "elliptic";
+import { privateToAddress } from "ethereumjs-utils";
 import keccak256 from "keccak256";
 import { io, Socket } from "socket.io-client";
 import * as tss from "tss-lib";
@@ -21,8 +22,8 @@ const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-const servers = 5; // process.argv[2] ? parseInt(process.argv[2]) : 2;
-const clientIndex = 5; // Note: parties with higher index tend to read more data than they send, which is good
+const servers = 3;
+const clientIndex = 3; // Note: parties with higher index tend to read more data than they send, which is good
 const websocketOnly = true;
 
 (window as any).Buffer = Buffer;
@@ -139,6 +140,7 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
 
   // generate private key and public key
   const privKey = new BN(eccrypto.generatePrivate());
+  (window as any).privKey = privKey;
   const pubKeyElliptic = ec.curve.g.mul(privKey);
   const pubKeyX = pubKeyElliptic.getX().toString(16, 64);
   const pubKeyY = pubKeyElliptic.getY().toString(16, 64);
@@ -188,6 +190,14 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
+  console.log(
+    "msgHash",
+    `0x${msgHash.toString("hex")}`,
+    "signature",
+    `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`,
+    "address",
+    `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`
+  );
   const passed = ec.verify(msgHash, signature, pubk);
 
   console.log("passed: ", passed);
