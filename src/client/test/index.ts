@@ -178,7 +178,7 @@ const tssTest = async () => {
   await tss.default(tssImportUrl);
 
   const share = await localStorageDB.get(`session-${session}:share`);
-  const client = new Client(session, clientIndex, parties, endpoints, sockets, share, pubKey, websocketOnly);
+  const client = new Client(session, clientIndex, parties, endpoints, sockets, share, pubKey, websocketOnly, tssImportUrl);
   client.registerTssLib(tss);
   (window as any).client = client;
 
