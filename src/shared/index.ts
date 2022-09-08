@@ -1,1 +1,1 @@
-export { default as Msg } from "./msg";
+export { default as Queue } from "./queue";
