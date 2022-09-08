@@ -22,7 +22,7 @@ export const registerWebSockets = (server: HttpServer) => {
       if (pendingRead !== undefined) {
         pendingRead(msg_data);
       } else {
-        msgQueue.publishMessage({
+        msgQueue.publish({
           session,
           sender,
           recipient,

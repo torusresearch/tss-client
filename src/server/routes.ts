@@ -107,7 +107,7 @@ router.post("/send", async (req, res) => {
   if (pendingRead !== undefined) {
     pendingRead(msg_data);
   } else {
-    msgQueue.publishMessage({
+    msgQueue.publish({
       session,
       sender,
       recipient,

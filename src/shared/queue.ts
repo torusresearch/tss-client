@@ -7,7 +7,7 @@ class Queue {
     return this._messages;
   }
 
-  publishMessage({ session, sender, recipient, msg_type, msg_data }: Msg): void {
+  publish({ session, sender, recipient, msg_type, msg_data }: Msg): void {
     this._messages.push({ session, sender, recipient, msg_type, msg_data });
   }
 }
