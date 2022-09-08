@@ -118,8 +118,6 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public _tssLib: typeof TssLib; // TODO: only necessary for ga1_array processing
-
   public tssImportUrl: string;
 
   private _readyResolves = [];
@@ -213,10 +211,6 @@ export class Client {
       return null;
     });
     global.tss_clients[this.session] = this;
-  }
-
-  registerTssLib(tssLib: typeof TssLib) {
-    this._tssLib = tssLib;
   }
 
   async ready() {

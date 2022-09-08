@@ -202,19 +202,6 @@ const registerRoutes = function (app) {
     res.sendStatus(200);
   });
 
-  router.post("/sign", async (req, res) => {
-    const { session, msg, hash_only } = req.body;
-    const precompute = precomputes[session];
-    if (precompute === undefined) {
-      res.statusMessage = `Precompute not found for session ${session}`;
-      res.status(400).end();
-      return;
-    }
-    res.send({
-      sig_frag: tss.local_sign(msg, hash_only, precompute),
-    });
-  });
-
   router.post("/cleanup", async (req, _) => {
     const { session } = req.body;
     console.log("session", session);
