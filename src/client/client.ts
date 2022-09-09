@@ -4,7 +4,7 @@ import { generatePrivate } from "eccrypto";
 import { Socket } from "socket.io-client";
 import * as TssLib from "tss-lib";
 
-import { Msg } from "../shared";
+import { Msg } from "../interfaces";
 import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
