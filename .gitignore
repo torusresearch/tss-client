@@ -6,3 +6,4 @@ dist
 pkg/dist
 pkg/*.tgz
 types/*
+.vscode
