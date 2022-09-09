@@ -10,6 +10,8 @@ import * as tss from "tss-lib";
 import { Client } from "../client";
 import { localStorageDB } from "../db";
 
+(window as any).BN = BN;
+
 // eslint-disable-next-line new-cap
 const ec = new EC.ec("secp256k1");
 const consolelog = function (...args) {
@@ -189,20 +191,16 @@ const tssTest = async () => {
 
   client.precompute(tss);
   await client.ready();
-  const sig = client.sign(tss, msgHash.toString("base64"), true);
-  global.consolelog("sig ", sig);
-
-  const sigHex = Buffer.from(sig, "base64").toString("hex");
-  const r = new BN(sigHex.slice(0, 64), 16);
-  const s = new BN(sigHex.slice(64), 16);
-  const signature = { r, s, recoveryParam: 0 };
-  global.consolelog("what is r", r);
+  const signature = client.sign(tss, msgHash.toString("base64"), true);
 
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
   global.consolelog("msgHash", `0x${msgHash.toString("hex")}`);
-  global.consolelog("signature", `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}1b`);
+  global.consolelog(
+    "signature",
+    `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`
+  );
   global.consolelog("address", `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 

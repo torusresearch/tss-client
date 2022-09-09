@@ -265,7 +265,7 @@ export class Client {
       });
   }
 
-  sign(tss: typeof TssLib, msg: string, hash_only: boolean) {
+  sign(tss: typeof TssLib, msg: string, hash_only: boolean): { r: BN; s: BN; recoveryParam: number } {
     if (!this._ready) {
       throw new Error("client is not ready");
     }
@@ -278,7 +278,13 @@ export class Client {
       sigFragments.push(tss.local_sign(msg, hash_only, precompute));
     }
 
-    return tss.local_verify(msg, hash_only, tss.get_r_from_precompute(this.precomputes[0]), sigFragments, this.pubKey);
+    const R = tss.get_r_from_precompute(this.precomputes[0]);
+    const sig = tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    const sigHex = Buffer.from(sig, "base64").toString("hex");
+    const r = new BN(sigHex.slice(0, 64), 16);
+    const s = new BN(sigHex.slice(64), 16);
+    const recoveryParam = Buffer.from(R, "base64")[63] % 2;
+    return { r, s, recoveryParam };
   }
 
   lookupEndpoint(session: string, party: number): string {
