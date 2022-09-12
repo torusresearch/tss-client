@@ -196,7 +196,7 @@ const tssTest = async () => {
   client.log(`pubkey, ${JSON.stringify(pubKey)}`);
   client.log(`msgHash: 0x${msgHash.toString("hex")}`);
   client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
-  client.log(`address: 0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
+  client.log(`address: 0x${Buffer.from(privateToAddress(`0x${privKey.toString(16, 64)}`)).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 
   client.log(`passed: ${passed}`);
