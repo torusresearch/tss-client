@@ -6,7 +6,7 @@
     "ecmaVersion": 11,
     "project": "./tsconfig.json"
   },
-  "ignorePatterns": ["*.config.js"],
+  "ignorePatterns": ["*.config.js", "*.d.ts"],
   "root": true,
   "env": {
     "es6": true,
