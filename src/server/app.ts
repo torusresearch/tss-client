@@ -1,3 +1,6 @@
+// Registering global rust functions.
+import "./global";
+
 import cors from "cors";
 import express from "express";
 
