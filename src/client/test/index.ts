@@ -145,6 +145,7 @@ const tssTest = async () => {
     } else {
       endpoints.push(`http://localhost:${base_port + serverPortOffset}`);
       tssWSEndpoints.push(`http://localhost:${base_port + serverPortOffset}`);
+      serverPortOffset++;
     }
   }
 
