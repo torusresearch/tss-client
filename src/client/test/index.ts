@@ -11,10 +11,11 @@ import { Client } from "../client";
 import { localStorageDB } from "../db";
 
 (window as any).BN = BN;
+(window as any).Buffer = Buffer;
 
 // eslint-disable-next-line new-cap
 const ec = new EC.ec("secp256k1");
-const consolelog = function (...args) {
+const log = function (...args) {
   let msg = "";
   args.map((arg) => {
     msg += JSON.stringify(arg);
@@ -25,19 +26,15 @@ const consolelog = function (...args) {
   li.appendChild(document.createTextNode(msg));
   ul.appendChild(li);
 };
-global.consolelog = consolelog;
 
 // CONSTANTS
-// const base_port = 8000;
-// const base_ws_port = 8000;
+const base_port = 8000;
 // const endpoint_prefix = "http://localhost:";
 // const ws_prefix = "ws://localhost:";
 const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
 const tssImportUrl = "/mpecdsa_bg.wasm";
-
-(window as any).Buffer = Buffer;
 
 const getLagrangeCoeff = (parties, party): BN => {
   const partyIndex = new BN(party + 1);
@@ -75,8 +72,6 @@ const distributeShares = async (privKey, parties, endpoints, localClientIndex) =
 
   if (reduced.toString(16) !== privKey.toString(16)) {
     throw new Error("additive shares dont sum up to private key");
-  } else {
-    global.consolelog("additive shares add up to private key");
   }
 
   // denormalise shares
@@ -84,7 +79,7 @@ const distributeShares = async (privKey, parties, endpoints, localClientIndex) =
     return additiveShare.mul(getLagrangeCoeff(parties, party).invm(ec.curve.n)).umod(ec.curve.n);
   });
 
-  global.consolelog(
+  console.log(
     "shares",
     shares.map((s) => s.toString(16, 64))
   );
@@ -134,7 +129,7 @@ const tssTest = async () => {
 
   // generate for local
 
-  const region = "sg";
+  const region = (document.getElementById("region") as any).value;
 
   // generate endpoints for servers
   let serverPortOffset = 1;
@@ -143,12 +138,13 @@ const tssTest = async () => {
     if (i === clientIndex) {
       endpoints.push(null);
       tssWSEndpoints.push(null);
-    } else {
-      // endpoints.push(`${endpoint_prefix}${base_port + serverPortOffset}`);
+    } else if (region !== "localhost") {
       endpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
-      // tssWSEndpoints.push(`${ws_prefix}${base_ws_port + serverPortOffset}`);
       tssWSEndpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
       serverPortOffset++;
+    } else {
+      endpoints.push(`http://localhost:${base_port + serverPortOffset}`);
+      tssWSEndpoints.push(`http://localhost:${base_port + serverPortOffset}`);
     }
   }
 
@@ -160,8 +156,6 @@ const tssTest = async () => {
   const pubKeyY = pubKeyElliptic.getY().toString(16, 64);
   const pubKeyHex = `${pubKeyX}${pubKeyY}`;
   const pubKey = Buffer.from(pubKeyHex, "hex").toString("base64");
-
-  global.consolelog("pubkey", pubKey);
 
   // distribute shares to servers and local device
   await distributeShares(privKey, parties, endpoints, clientIndex);
@@ -185,6 +179,7 @@ const tssTest = async () => {
 
   const share = await localStorageDB.get(`session-${session}:share`);
   const client = new Client(session, clientIndex, parties, endpoints, sockets, share, pubKey, websocketOnly, tssImportUrl);
+  client.log = log;
   (window as any).client = client;
 
   global.startTime = Date.now();
@@ -196,17 +191,15 @@ const tssTest = async () => {
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
-  global.consolelog("msgHash", `0x${msgHash.toString("hex")}`);
-  global.consolelog(
-    "signature",
-    `0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`
-  );
-  global.consolelog("address", `0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
+  client.log(`pubkey, ${JSON.stringify(pubKey)}`);
+  client.log(`msgHash: 0x${msgHash.toString("hex")}`);
+  client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
+  client.log(`address: 0x${Buffer.from(privateToAddress(privKey)).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 
-  global.consolelog("passed: ", passed);
-  global.endTime = Date.now();
-  global.consolelog("time elapsed", global.endTime - global.startTime);
+  client.log(`passed: ${passed}`);
+  client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
+  client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
   (window as any).document.getElementById("run").setAttribute("disabled", true);
 };
 

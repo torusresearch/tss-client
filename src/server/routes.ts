@@ -139,9 +139,9 @@ router.post("/precompute", async (req, res) => {
   }
   signers[session] = tss.threshold_signer(session, player_index, parties.length, threshold, share, pubkey);
   // const randomNum = BigInt(`0x${crypto.randomBytes(32).toString("hex")}`);
-  const randomNum = new BN(crypto.randomBytes(32)).umod(new BN("18446744073709551615"));
+  const randomNum = new BN(crypto.randomBytes(32)).umod(new BN("18446744073709551615")); // TODO: fix, this is only 64 bit entropy
   rngs[session] = tss.random_generator(randomNum.toString("hex"));
-  res.sendStatus(200); // TODO: end request before processing..?
+  res.sendStatus(200);
   await tss.setup(signers[session], rngs[session]);
   precomputes[session] = await tss.precompute(parties, signers[session], rngs[session]);
   await wsNotify(notifyWebsocketId, player_index, session);

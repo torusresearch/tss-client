@@ -12,49 +12,38 @@ if (global.tss_clients === undefined) {
   global.tss_clients = {};
 }
 
-if (global.js_pending_reads === undefined) {
-  global.js_pending_reads = {};
-}
-
-// global.total_outgoing = 0;
-// global.total_outgoing_msg = [];
-// global.total_incoming = 0;
-// global.total_incoming_msg = [];
-
 if (global.js_read_msg === undefined) {
   global.js_read_msg = async function (session, self_index, party, msg_type) {
-    global.consolelog("reading msg", msg_type);
+    const tss_client = global.tss_clients[session] as Client;
+    tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
+      // runs ga1_array processing on a web worker instead of blocking the main thread
       return "supported";
     }
-    const tss_client = global.tss_clients[session] as Client;
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
       return new Promise((resolve) => {
         tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`] = resolve;
       });
     }
-    // global.total_incoming += mm.msg_data.length;
-    // global.total_incoming_msg.push(mm.msg_data);
     return mm.msg_data;
   };
 }
 
 global.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
   const worker = new TssWebWorker(tssImportUrl);
-  // const res = tss.process_ga1(msg_data);
   const res = worker.work<string>("process_ga1", [msg_data]);
   return res;
 };
 
 if (global.js_send_msg === undefined) {
   global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
-    global.consolelog("sending msg", msg_type);
     const tss_client = global.tss_clients[session] as Client;
+    tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
       global.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
-        const pendingRead =
-          tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`];
+        const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
+        const pendingRead = tss_client.pendingReads[key];
         if (pendingRead !== undefined) {
           pendingRead(processed_data);
         } else {
@@ -70,8 +59,6 @@ if (global.js_send_msg === undefined) {
       });
       return true;
     }
-    // global.total_outgoing += msg_data.length;
-    // global.total_outgoing_msg.push(msg_data);
     if (tss_client.websocketOnly) {
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
@@ -94,6 +81,10 @@ if (global.js_send_msg === undefined) {
     return true;
   };
 }
+
+type Log = {
+  (msg: string): void;
+};
 
 export class Client {
   public session: string;
@@ -120,6 +111,16 @@ export class Client {
 
   public tssImportUrl: string;
 
+  public _startPrecomputeTime: number;
+
+  public _endPrecomputeTime: number;
+
+  public _startSignTime: number;
+
+  public _endSignTime: number;
+
+  public log: Log;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
@@ -127,6 +128,12 @@ export class Client {
   private _readyPromiseAll: Promise<unknown>;
 
   private _ready: boolean;
+
+  private _consumed: boolean;
+
+  private _signer: number;
+
+  private _rng: number;
 
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
@@ -156,6 +163,9 @@ export class Client {
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
     this.tssImportUrl = _tssImportUrl;
+    this.log = console.log;
+    this._ready = false;
+    this._consumed = false;
 
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
@@ -177,7 +187,7 @@ export class Client {
       socket.on("send", async (data, cb) => {
         const { session, sender, recipient, msg_type, msg_data } = data;
         if (session !== this.session) {
-          global.consolelog(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
         const pendingRead = this.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
@@ -194,7 +204,7 @@ export class Client {
       socket.on("precompute_complete", async (data, cb) => {
         const { session, party } = data;
         if (session !== this.session) {
-          global.consolelog(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
         if (cb) cb();
@@ -208,6 +218,7 @@ export class Client {
 
     this._readyPromiseAll = Promise.all(this._readyPromises).then(() => {
       this._ready = true;
+      this._endPrecomputeTime = Date.now();
       return null;
     });
     global.tss_clients[this.session] = this;
@@ -218,10 +229,9 @@ export class Client {
   }
 
   precompute(tss: typeof TssLib) {
-    const signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-    // const rng = tss.random_generator(BigInt(`0x${generatePrivate().toString("hex")}`));
-    const rng = tss.random_generator(new BN(generatePrivate()).umod(new BN("18446744073709551615")).toString("hex"));
-    // const rng = tss.random_generator("00");
+    this._startPrecomputeTime = Date.now();
+    this._signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+    this._rng = tss.random_generator(new BN(generatePrivate()).umod(new BN("18446744073709551615")).toString("hex"));
 
     // check if sockets have connected and have an id;
     this.sockets.map((socket, party) => {
@@ -254,9 +264,9 @@ export class Client {
       }
     }
     tss
-      .setup(signer, rng)
+      .setup(this._signer, this._rng)
       .then(() => {
-        return tss.precompute(new Uint8Array(this.parties), signer, rng);
+        return tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
       })
       .then((precompute) => {
         this.precomputes[this.parties.indexOf(this.index)] = precompute;
@@ -269,9 +279,15 @@ export class Client {
     if (!this._ready) {
       throw new Error("client is not ready");
     }
+    if (this._consumed) {
+      throw new Error("this instance has already signed a message and cannot be reused");
+    } else {
+      this._consumed = true;
+    }
     if (this.precomputes.length !== this.parties.length) {
       throw new Error("insufficient precomputes");
     }
+    this._startSignTime = Date.now();
     const sigFragments = [];
     for (let i = 0; i < this.precomputes.length; i++) {
       const precompute = this.precomputes[i];
@@ -284,10 +300,30 @@ export class Client {
     const r = new BN(sigHex.slice(0, 64), 16);
     const s = new BN(sigHex.slice(64), 16);
     const recoveryParam = Buffer.from(R, "base64")[63] % 2;
+    this._endSignTime = Date.now();
     return { r, s, recoveryParam };
   }
 
   lookupEndpoint(session: string, party: number): string {
+    if (session !== this.session) throw new Error("incorrect session when looking up endpoint");
     return this.endpoints[party];
+  }
+
+  async cleanup(tss: typeof TssLib) {
+    // free rust objects
+    tss.random_generator_free(this._rng);
+    tss.threshold_signer_free(this._signer);
+
+    // remove references
+    delete global.tss_clients[this.session];
+
+    await Promise.all(
+      this.parties.map((party) => {
+        if (party !== this.index) {
+          return axios.get(`${this.lookupEndpoint(this.session, party)}/cleanup`);
+        }
+        return Promise.resolve(true);
+      })
+    );
   }
 }
