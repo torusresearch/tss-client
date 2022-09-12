@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as BN from "bn.js";
 import { generatePrivate } from "eccrypto";
+import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
 import * as TssLib from "tss-lib";
 
@@ -208,10 +209,7 @@ export class Client {
           return;
         }
         if (cb) cb();
-        const { precompute } = await axios
-          .post(`${this.lookupEndpoint(this.session, party)}/retrieve_precompute`, { session })
-          .then((res) => res.data);
-        this.precomputes[this.parties.indexOf(party)] = precompute;
+        this.precomputes[this.parties.indexOf(party)] = "precompute_complete";
         resolve();
       });
     });
@@ -275,7 +273,13 @@ export class Client {
       });
   }
 
-  sign(tss: typeof TssLib, msg: string, hash_only: boolean): { r: BN; s: BN; recoveryParam: number } {
+  async sign(
+    tss: typeof TssLib,
+    msg: string,
+    hash_only: boolean,
+    original_message: string,
+    hash_algo: string
+  ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
     if (!this._ready) {
       throw new Error("client is not ready");
     }
@@ -287,14 +291,46 @@ export class Client {
     if (this.precomputes.length !== this.parties.length) {
       throw new Error("insufficient precomputes");
     }
-    this._startSignTime = Date.now();
-    const sigFragments = [];
-    for (let i = 0; i < this.precomputes.length; i++) {
-      const precompute = this.precomputes[i];
-      sigFragments.push(tss.local_sign(msg, hash_only, precompute));
+
+    // check message hashing
+    if (hash_only) {
+      if (hash_algo === "keccak256") {
+        if (keccak256(original_message).toString("base64") !== msg) {
+          throw new Error("hash of original message does not match msg");
+        }
+      } else {
+        throw new Error(`hash algo ${hash_algo} not supported`);
+      }
     }
 
-    const R = tss.get_r_from_precompute(this.precomputes[0]);
+    this._startSignTime = Date.now();
+    const sigFragmentsPromises = [];
+    for (let i = 0; i < this.precomputes.length; i++) {
+      const precompute = this.precomputes[i];
+      const party = i;
+      if (precompute === "precompute_complete") {
+        const endpoint = this.lookupEndpoint(this.session, party);
+        sigFragmentsPromises.push(
+          axios
+            .post(`${endpoint}/sign`, {
+              session: this.session,
+              sender: this.index,
+              recipient: party,
+              msg,
+              hash_only,
+              original_message,
+              hash_algo,
+            })
+            .then((res) => res.data.sig)
+        );
+      } else {
+        sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
+      }
+    }
+
+    const sigFragments = await Promise.all(sigFragmentsPromises);
+
+    const R = tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
     const sig = tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
@@ -320,7 +356,7 @@ export class Client {
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
-          return axios.get(`${this.lookupEndpoint(this.session, party)}/cleanup`);
+          return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session });
         }
         return Promise.resolve(true);
       })

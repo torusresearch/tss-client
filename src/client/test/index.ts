@@ -117,6 +117,7 @@ const tssTest = async () => {
   // const endpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
   // const tssWSEndpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
 
+  (window as any).document.getElementById("run").setAttribute("disabled", true);
   const servers = parseInt((document.getElementById("servers") as any).value);
   const clientIndex = servers; // Note: parties with higher index tend to read more data than they send, which is good
   const websocketOnly = (document.getElementById("websocket-send") as any).value === "y";
@@ -187,7 +188,7 @@ const tssTest = async () => {
 
   client.precompute(tss);
   await client.ready();
-  const signature = client.sign(tss, msgHash.toString("base64"), true);
+  const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256");
 
   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
@@ -201,7 +202,8 @@ const tssTest = async () => {
   client.log(`passed: ${passed}`);
   client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
   client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-  (window as any).document.getElementById("run").setAttribute("disabled", true);
+  await client.cleanup(tss);
+  client.log("client cleaned up");
 };
 
 (window as any).tssTest = tssTest;

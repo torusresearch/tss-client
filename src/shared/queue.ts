@@ -10,6 +10,10 @@ class Queue {
   publish({ session, sender, recipient, msg_type, msg_data }: Msg): void {
     this._messages.push({ session, sender, recipient, msg_type, msg_data });
   }
+
+  clear({ session }) {
+    this._messages = this._messages.filter((msg) => msg.session !== session);
+  }
 }
 
 export default Queue;
