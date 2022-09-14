@@ -3,30 +3,18 @@ const path = require("path");
 const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
 const CopyPlugin = require("copy-webpack-plugin");
 
-const config = require("./webpack.base.config");
 const devMode = process.env.NODE_ENV !== "production";
 
-/** @type {import("webpack").Configuration} */
 module.exports = {
-  ...config,
-  target: "web",
+  mode: process.env.NODE_ENV || "production",
   devtool: devMode ? "source-map" : false,
-  entry: "./public/main.ts",
+  target: 'web',
+  entry: './main.ts',
   output: {
-    ...config.output,
-    filename: "test.min.js",
-  },
-  module: {
-    ...config.module,
-    rules: config.module.rules.concat([
-      {
-        test: /\.worker\.js$/,
-        type: "asset/source",
-      },
-    ]),
+    filename: "test.min.js"
   },
   resolve: {
-    ...config.resolve,
+    extensions: [".ts", ".tsx", ".js", ".jsx"],
     alias: {
       "bn.js": path.resolve("./node_modules", "bn.js"),
     },
@@ -43,7 +31,7 @@ module.exports = {
       path: false,
     },
   },
-  plugins: config.plugins.concat([
+  plugins: [
     new webpack.ProvidePlugin({
       Buffer: ["buffer", "Buffer"],
     }),
@@ -57,38 +45,49 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         {
-          from: "node_modules/tss-lib/dist/mpecdsa.min.js",
-          to: path.resolve(__dirname, "../dist/"),
-        },
-        {
           from: "node_modules/tss-lib/wasm/client.wasm",
-          to: path.resolve(__dirname, "../dist/mpecdsa_bg.wasm"),
-        },
+          to: path.resolve(__dirname, "./dist/mpecdsa_bg.wasm")
+        }
       ],
     }),
-  ]),
+  ],
+  module: {
+    rules: [
+      {
+        test: /\.(ts|js)x?$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: "babel-loader",
+          options: {
+            cacheDirectory: true,
+            cacheCompression: false,
+          },
+        },
+      },
+    ],
+  },
   devServer: {
     port: 4000,
     open: true,
     allowedHosts: "all",
     static: [
       {
-        directory: path.join(__dirname, "../public"),
-        watch: false,
+        directory: path.join(__dirname, './public'),
+        watch: false
       },
       {
-        directory: path.join(__dirname, "../dist"),
-        watch: false,
+        directory: path.join(__dirname, './dist'),
+        watch: false
       },
     ],
-    watchFiles: ["src/client/**/*.js", "src/client/**/*.ts", "public/**/*"],
+    watchFiles: ['main.ts', 'public/**/*'],
     onListening: function (devServer) {
       if (!devServer) {
-        throw new Error("webpack-dev-server is not defined");
+        throw new Error('webpack-dev-server is not defined');
       }
 
       const port = devServer.server.address().port;
-      console.log("Listening on port:", port);
+      console.log('Listening on port:', port);
     },
-  },
+  }
 };

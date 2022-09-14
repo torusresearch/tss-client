@@ -6,9 +6,7 @@ import { privateToAddress } from "ethereumjs-utils";
 import keccak256 from "keccak256";
 import { io, Socket } from "socket.io-client";
 import * as tss from "tss-lib";
-
-import { Client } from "../client";
-import { localStorageDB } from "../db";
+import { Client, localStorageDB } from "tss-node-client";
 
 (window as any).BN = BN;
 (window as any).Buffer = Buffer;
@@ -34,7 +32,7 @@ const base_port = 8000;
 const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
-const tssImportUrl = "/mpecdsa_bg.wasm";
+const tssImportUrl = `${window.location.href}mpecdsa_bg.wasm`;
 
 const getLagrangeCoeff = (parties, party): BN => {
   const partyIndex = new BN(party + 1);

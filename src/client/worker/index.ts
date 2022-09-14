@@ -1,19 +1,18 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+// eslint-disable-next-line
+import createWorker from "workerize-loader?inline!./worker.js";
+
 import { TssWorker } from "../../interfaces";
 
 class TssWebWorker implements TssWorker {
-  constructor(private _tssWasmFileurl: string) {}
+  constructor(private _wasmUrl) {}
 
   async work<T>(method: string, args: string[]): Promise<T> {
     try {
-      const worker = new Worker(new URL("./worker.js", import.meta.url));
-      const msg = { method, args, wasmFileUrl: this._tssWasmFileurl };
-      const prom = new Promise((resolve) => {
-        worker.onmessage = function ({ data }) {
-          resolve(data.data);
-        };
-      });
-      worker.postMessage({ data: msg });
-      const mes = await prom;
+      const worker = createWorker();
+      await worker.instantiate(this._wasmUrl);
+      const mes = await worker.takeAction(method, args);
       return mes as T;
     } catch (e) {
       console.log("error", e);
