@@ -1,40 +1,33 @@
 {
-  "name": "tss-node-example",
+  "name": "tss-node-client",
   "version": "1.0.0",
-  "description": "",
-  "main": "public/index.html",
+  "description": "Client SDK for MPECDSA signing",
+  "files": [
+    "dist/*"
+  ],
+  "main": "dist/tssNodeClient.cjs.js",
+  "module": "dist/tssNodeClient.umd.min.js",
+  "unpkg": "dist/tssNodeClient.umd.min.js",
+  "browser": "dist/tssNodeClient.umd.min.js",
+  "types": "dist/types/index.d.ts",
   "scripts": {
-    "start": "cross-env NODE_ENV=development webpack serve -c webpack.config.js",
-    "clean": "rimraf ./dist",
-    "build": "npm run clean && NODE_ENV=production webpack -c webpack.config.js",
-    "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "depcheck": "depcheck .",
+    "dev": "torus-scripts start"
   },
-  "keywords": [],
   "author": "Web3Auth",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.18.6",
-    "@babel/preset-env": "^7.18.6",
     "axios": "^0.27.2",
-    "babelify": "^10.0.0",
     "bn.js": "^5.2.1",
-    "browserify": "^17.0.0",
-    "bthreads": "^0.5.1",
-    "cors": "^2.8.5",
     "eccrypto": "^1.1.6",
-    "elliptic": "^6.5.4",
-    "esmify": "^2.1.1",
-    "ethereumjs-utils": "^5.2.5",
-    "express": "^4.18.1",
     "keccak256": "^1.0.6",
-    "mock-local-storage": "^1.1.23",
-    "random-id": "^1.0.4",
     "socket.io-client": "^4.5.1",
-    "tss-lib": "../pkg",
-    "tss-node-client": "../tss-node-client-1.0.26.tgz"
+    "tss-lib": "*"
   },
   "devDependencies": {
     "@babel/core": "~7.18.5",
+    "@babel/plugin-syntax-bigint": "^7.8.3",
     "@babel/plugin-proposal-class-properties": "^7.17.12",
     "@babel/plugin-proposal-object-rest-spread": "^7.18.0",
     "@babel/plugin-transform-runtime": "~7.18.5",
@@ -53,6 +46,7 @@
     "prettier": "^2.7.1",
     "process": "^0.11.10",
     "rimraf": "^3.0.2",
+    "sequelize-cli": "^6.4.1",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "style-loader": "^3.3.1",
@@ -61,6 +55,7 @@
     "webpack": "^5.73.0",
     "webpack-bundle-analyzer": "^4.5.0",
     "webpack-cli": "^4.10.0",
-    "webpack-dev-server": "^4.9.3"
+    "webpack-dev-server": "^4.9.3",
+    "workerize-loader": "^2.0.2"
   }
 }

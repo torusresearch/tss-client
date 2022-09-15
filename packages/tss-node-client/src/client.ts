@@ -5,7 +5,7 @@ import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
 import * as TssLib from "tss-lib";
 
-import { Msg } from "../interfaces";
+import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals

@@ -1,4 +1,4 @@
-import { DB } from "../interfaces";
+import { DB } from "./types";
 
 class WebDb implements DB {
   get = (key: string): Promise<string> => {

@@ -1,35 +1,39 @@
 
-# TSS-Node POC
-POC for tss signature verification.
+# TSS-Client-SDk
+Client Side SDK for tss signature verification.
 
-### Installation and Setup
+### Installation and setup
 <br />
 1. Installing node_modules
 
 ```
-cd pkg && npm i && npm run build && cd ..
-npm i
+yarn
 ```
 
 <br />
-2. Generate info for your server nodes
+2. Bootstrap
 
 ```
-npm run build:server
-npm run serve:server 1
+yarn bootstrap
+```
+<br />
+3. Running the packages
+
+```
+yarn run dev
 ```
 
 ### Development
 <br />
-1. Run server
+1. Setup any of the demo apps from `demo` folders.
 
 ```
-npm run build:server && npm run serve:server
+cd demo/<folder-name>
 ```
 
 <br />
-2. Run client (browser)
+2. Run example app.
 
 ```
-npm run serve:client
+npm i && npm start
 ```

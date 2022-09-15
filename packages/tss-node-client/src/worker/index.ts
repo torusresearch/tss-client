@@ -3,10 +3,10 @@
 // eslint-disable-next-line
 import createWorker from "workerize-loader?inline!./worker.js";
 
-import { TssWorker } from "../../interfaces";
+import { TssWorker } from "../types";
 
 class TssWebWorker implements TssWorker {
-  constructor(private _wasmUrl) {}
+  constructor(private _wasmUrl: string) {}
 
   async work<T>(method: string, args: string[]): Promise<T> {
     try {
