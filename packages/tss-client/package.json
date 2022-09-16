@@ -1,14 +1,14 @@
 {
-  "name": "tss-node-client",
+  "name": "tss-client",
   "version": "1.0.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
     "dist/*"
   ],
-  "main": "dist/tssNodeClient.cjs.js",
-  "module": "dist/tssNodeClient.umd.min.js",
-  "unpkg": "dist/tssNodeClient.umd.min.js",
-  "browser": "dist/tssNodeClient.umd.min.js",
+  "main": "dist/tssClient.cjs.js",
+  "module": "dist/tssClient.umd.min.js",
+  "unpkg": "dist/tssClient.umd.min.js",
+  "browser": "dist/tssClient.umd.min.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
