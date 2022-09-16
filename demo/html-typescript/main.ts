@@ -6,7 +6,7 @@ import { privateToAddress } from "ethereumjs-utils";
 import keccak256 from "keccak256";
 import { io, Socket } from "socket.io-client";
 import * as tss from "tss-lib";
-import { Client, localStorageDB } from "tss-node-client";
+import { Client, localStorageDB } from "tss-client";
 
 (window as any).BN = BN;
 (window as any).Buffer = Buffer;
