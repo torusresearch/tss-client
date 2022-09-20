@@ -8,11 +8,9 @@
   ],
   "scripts": {
     "bootstrap": "lerna bootstrap",
-    "start": "node ./dist/server.js",
     "clean": "rimraf ./dist",
     "dev": "lerna run dev --parallel",
     "depcheck": "lerna run depcheck --parallel",
-    "build:client": "npm run clean && torus-scripts build",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "test": "node test.js"
   },
