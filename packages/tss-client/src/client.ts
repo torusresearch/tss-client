@@ -293,7 +293,7 @@ export class Client {
     }
 
     // check message hashing
-    if (hash_only) {
+    if (!hash_only) {
       if (hash_algo === "keccak256") {
         if (keccak256(original_message).toString("base64") !== msg) {
           throw new Error("hash of original message does not match msg");
