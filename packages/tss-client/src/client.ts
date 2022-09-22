@@ -122,15 +122,15 @@ export class Client {
 
   public log: Log;
 
+  public _ready: boolean;
+
+  public _consumed: boolean;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
 
   private _readyPromiseAll: Promise<unknown>;
-
-  private _ready: boolean;
-
-  private _consumed: boolean;
 
   private _signer: number;
 
@@ -141,8 +141,8 @@ export class Client {
     _session: string,
     _index: number,
     _parties: number[],
-    _endpoints: string[],
-    _sockets: Socket[],
+    _endpoints: (string | null | undefined)[],
+    _sockets: (Socket | null | undefined)[],
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
