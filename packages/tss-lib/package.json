@@ -4,12 +4,12 @@
   "files": [
     "wasm/*",
     "browser.js",
-    "mpecdsa.d.ts",
+    "dkls.d.ts",
     "dist/*"
   ],
-  "main": "dist/mpecdsa.min.js",
-  "browser": "dist/mpecdsa.min.js",
-  "types": "mpecdsa.d.ts",
+  "main": "dist/dkls.min.js",
+  "browser": "dist/dkls.min.js",
+  "types": "dkls.d.ts",
   "scripts": {
     "clean": "rimraf ./dist",
     "depcheck": "depcheck .",

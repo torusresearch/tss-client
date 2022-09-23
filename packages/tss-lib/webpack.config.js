@@ -10,10 +10,10 @@ module.exports = {
   entry: "./browser.js",
   target: "web",
   output: {
-    library: { type: "umd", name: "mpecdsa" },
+    library: { type: "umd", name: "dkls" },
     path: path.resolve(__dirname, "./dist"),
-    filename: "mpecdsa.min.js",
-    assetModuleFilename: 'mpecdsa_bg[ext]',
+    filename: "dkls.min.js",
+    assetModuleFilename: 'dkls_bg[ext]',
     publicPath: "/"
   },
   module: {

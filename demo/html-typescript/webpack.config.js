@@ -46,7 +46,7 @@ module.exports = {
       patterns: [
         {
           from: "node_modules/tss-lib/wasm/client.wasm",
-          to: path.resolve(__dirname, "./dist/mpecdsa_bg.wasm")
+          to: path.resolve(__dirname, "./dist/dkls_bg.wasm")
         }
       ],
     }),

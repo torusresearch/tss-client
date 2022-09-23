@@ -5,8 +5,8 @@ import EC from "elliptic";
 import { privateToAddress } from "ethereumjs-utils";
 import keccak256 from "keccak256";
 import { io, Socket } from "socket.io-client";
-import * as tss from "tss-lib";
 import { Client, localStorageDB } from "tss-client";
+import * as tss from "tss-lib";
 
 (window as any).BN = BN;
 (window as any).Buffer = Buffer;
@@ -32,7 +32,7 @@ const base_port = 8000;
 const msg = "hello world";
 const msgHash = keccak256(msg);
 const session = `test${Date.now()}`;
-const tssImportUrl = `${window.location.href}mpecdsa_bg.wasm`;
+const tssImportUrl = `${window.location.href}dkls_bg.wasm`;
 
 const getLagrangeCoeff = (parties, party): BN => {
   const partyIndex = new BN(party + 1);
@@ -112,8 +112,8 @@ const createSockets = async (wsEndpoints): Promise<Socket[]> => {
 
 const tssTest = async () => {
   // const parties = [0, 1];
-  // const endpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
-  // const tssWSEndpoints = ["http://mpecdsa-sg-1.web3auth.io", null];
+  // const endpoints = ["http://dkls-sg-1.web3auth.io", null];
+  // const tssWSEndpoints = ["http://dkls-sg-1.web3auth.io", null];
 
   (window as any).document.getElementById("run").setAttribute("disabled", true);
   const servers = parseInt((document.getElementById("servers") as any).value);
@@ -138,8 +138,8 @@ const tssTest = async () => {
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else if (region !== "localhost") {
-      endpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
-      tssWSEndpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
+      endpoints.push(`http://dkls-${region}-${serverPortOffset}.web3auth.io`);
+      tssWSEndpoints.push(`http://dkls-${region}-${serverPortOffset}.web3auth.io`);
       serverPortOffset++;
     } else {
       endpoints.push(`http://localhost:${base_port + serverPortOffset}`);
