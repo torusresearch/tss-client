@@ -229,7 +229,7 @@ export class Client {
   precompute(tss: typeof TssLib) {
     this._startPrecomputeTime = Date.now();
     this._signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-    this._rng = tss.random_generator(new BN(generatePrivate()).umod(new BN("18446744073709551615")).toString("hex"));
+    this._rng = tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
     // check if sockets have connected and have an id;
     this.sockets.map((socket, party) => {

@@ -138,8 +138,8 @@ const tssTest = async () => {
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else if (region !== "localhost") {
-      endpoints.push(`http://dkls-${region}-${serverPortOffset}.web3auth.io`);
-      tssWSEndpoints.push(`http://dkls-${region}-${serverPortOffset}.web3auth.io`);
+      endpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
+      tssWSEndpoints.push(`http://mpecdsa-${region}-${serverPortOffset}.web3auth.io`);
       serverPortOffset++;
     } else {
       endpoints.push(`http://localhost:${base_port + serverPortOffset}`);
