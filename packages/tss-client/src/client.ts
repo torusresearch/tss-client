@@ -226,7 +226,7 @@ export class Client {
     await this._readyPromiseAll;
   }
 
-  precompute(tss: typeof TssLib) {
+  precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
     this._startPrecomputeTime = Date.now();
     this._signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
     this._rng = tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
@@ -258,6 +258,7 @@ export class Client {
           pubkey: this.pubKey,
           notifyWebsocketId: this.sockets[party].id,
           sendWebsocket: this.sockets[party].id,
+          ...additionalParams,
         });
       }
     }
@@ -278,7 +279,8 @@ export class Client {
     msg: string,
     hash_only: boolean,
     original_message: string,
-    hash_algo: string
+    hash_algo: string,
+    additionalParams?: Record<string, unknown>
   ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
     if (!this._ready) {
       throw new Error("client is not ready");
@@ -320,6 +322,7 @@ export class Client {
               hash_only,
               original_message,
               hash_algo,
+              ...additionalParams,
             })
             .then((res) => res.data.sig)
         );
@@ -345,7 +348,7 @@ export class Client {
     return this.endpoints[party];
   }
 
-  async cleanup(tss: typeof TssLib) {
+  async cleanup(tss: typeof TssLib, additionalParams?: Record<string, any>) {
     // free rust objects
     tss.random_generator_free(this._rng);
     tss.threshold_signer_free(this._signer);
@@ -356,7 +359,7 @@ export class Client {
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
-          return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session });
+          return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
         }
         return Promise.resolve(true);
       })
