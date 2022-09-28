@@ -15,7 +15,7 @@ class TssWebWorker implements TssWorker {
       const mes = await worker.takeAction(method, args);
       return mes as T;
     } catch (e) {
-      console.log("error", e);
+      console.error(e);
     }
   }
 }

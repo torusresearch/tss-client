@@ -13,6 +13,7 @@
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
-  },
+    "resolveJsonModule": true,
+    "declaration": true
+  }
 }

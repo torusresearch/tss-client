@@ -1,6 +1,6 @@
+import { generatePrivate } from "@toruslabs/eccrypto";
 import axios from "axios";
-import * as BN from "bn.js";
-import { generatePrivate } from "eccrypto";
+import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
 import * as TssLib from "tss-lib";
@@ -9,13 +9,13 @@ import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
-if (global.tss_clients === undefined) {
-  global.tss_clients = {};
+if (globalThis.tss_clients === undefined) {
+  globalThis.tss_clients = {};
 }
 
-if (global.js_read_msg === undefined) {
-  global.js_read_msg = async function (session, self_index, party, msg_type) {
-    const tss_client = global.tss_clients[session] as Client;
+if (globalThis.js_read_msg === undefined) {
+  globalThis.js_read_msg = async function (session, self_index, party, msg_type) {
+    const tss_client = globalThis.tss_clients[session] as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
       // runs ga1_array processing on a web worker instead of blocking the main thread
@@ -31,18 +31,18 @@ if (global.js_read_msg === undefined) {
   };
 }
 
-global.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
+globalThis.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
   const worker = new TssWebWorker(tssImportUrl);
   const res = worker.work<string>("process_ga1", [msg_data]);
   return res;
 };
 
-if (global.js_send_msg === undefined) {
-  global.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
-    const tss_client = global.tss_clients[session] as Client;
+if (globalThis.js_send_msg === undefined) {
+  globalThis.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
+    const tss_client = globalThis.tss_clients[session] as Client;
     tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      global.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
+      globalThis.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
         const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
         const pendingRead = tss_client.pendingReads[key];
         if (pendingRead !== undefined) {
@@ -193,8 +193,8 @@ export class Client {
         }
         const pendingRead = this.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
         if (pendingRead !== undefined) {
-          // global.total_incoming += msg_data.length;
-          // global.total_incoming_msg.push(msg_data);
+          // globalThis.total_incoming += msg_data.length;
+          // globalThis.total_incoming_msg.push(msg_data);
           pendingRead(msg_data);
         } else {
           this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
@@ -219,7 +219,7 @@ export class Client {
       this._endPrecomputeTime = Date.now();
       return null;
     });
-    global.tss_clients[this.session] = this;
+    globalThis.tss_clients[this.session] = this;
   }
 
   async ready() {
@@ -354,7 +354,7 @@ export class Client {
     tss.threshold_signer_free(this._signer);
 
     // remove references
-    delete global.tss_clients[this.session];
+    delete globalThis.tss_clients[this.session];
 
     await Promise.all(
       this.parties.map((party) => {

@@ -6,7 +6,6 @@
     "dist/*"
   ],
   "main": "dist/tssClient.cjs.js",
-  "module": "dist/tssClient.umd.min.js",
   "unpkg": "dist/tssClient.umd.min.js",
   "browser": "dist/tssClient.umd.min.js",
   "types": "dist/types/index.d.ts",
@@ -14,19 +13,20 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "depcheck": "depcheck .",
     "dev": "torus-scripts start",
-    "build": "torus-scripts build"
+    "build": "torus-scripts build && tsc --emitDeclarationOnly"
   },
   "author": "Web3Auth",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.27.2",
     "bn.js": "^5.2.1",
-    "eccrypto": "^1.1.6",
+    "@toruslabs/eccrypto": "^1.1.8",
     "keccak256": "^1.0.6",
     "socket.io-client": "^4.5.1",
     "tss-lib": "*"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.1.1",
     "cross-env": "^7.0.3",
     "rimraf": "^3.0.2",
     "workerize-loader": "^2.0.2"
