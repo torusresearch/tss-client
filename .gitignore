@@ -1,0 +1,10 @@
+80*.json
+node_modules/
+.DS_Store
+.idea/
+dist
+*.tgz
+pkg/dist
+pkg/*.tgz
+types/*
+.vscode
