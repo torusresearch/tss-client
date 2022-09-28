@@ -12,7 +12,6 @@ module.exports = {
     library: { type: "umd", name: "dkls" },
     path: path.resolve(__dirname, "./dist"),
     filename: "dkls.min.js",
-    assetModuleFilename: "dkls_bg[ext]",
     publicPath: "/",
   },
   module: {
