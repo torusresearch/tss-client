@@ -2,10 +2,11 @@
   "name": "tss-lib",
   "version": "0.1.16",
   "files": [
-    "wasm/*",
+    "wasm",
     "browser.js",
     "dkls.d.ts",
-    "dist/*"
+    "dkls_bg.wasm.d.ts",
+    "dist"
   ],
   "main": "dist/dkls.min.js",
   "browser": "dist/dkls.min.js",

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
-    "dist/*"
+    "dist"
   ],
   "main": "dist/tssClient.cjs.js",
   "unpkg": "dist/tssClient.umd.min.js",
