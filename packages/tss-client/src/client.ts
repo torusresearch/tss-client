@@ -1,9 +1,9 @@
 import { generatePrivate } from "@toruslabs/eccrypto";
+import * as TssLib from "@toruslabs/tss-lib";
 import axios from "axios";
 import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
-import * as TssLib from "tss-lib";
 
 import { Msg } from "./types";
 import TssWebWorker from "./worker";

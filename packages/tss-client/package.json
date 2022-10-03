@@ -1,5 +1,5 @@
 {
-  "name": "tss-client",
+  "name": "@toruslabs/tss-client",
   "version": "1.0.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
@@ -24,12 +24,15 @@
     "@toruslabs/eccrypto": "^1.1.8",
     "keccak256": "^1.0.6",
     "socket.io-client": "^4.5.1",
-    "tss-lib": "*"
+    "@toruslabs/tss-lib": "*"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",
     "cross-env": "^7.0.3",
     "rimraf": "^3.0.2",
     "workerize-loader": "^2.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
