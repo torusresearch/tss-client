@@ -1,9 +1,9 @@
 {
-  "name": "tss-client",
-  "version": "1.0.0",
+  "name": "@toruslabs/tss-client",
+  "version": "0.0.1",
   "description": "Client SDK for MPECDSA signing",
   "files": [
-    "dist/*"
+    "dist"
   ],
   "main": "dist/tssClient.cjs.js",
   "unpkg": "dist/tssClient.umd.min.js",
@@ -19,17 +19,20 @@
   "author": "Web3Auth",
   "license": "ISC",
   "dependencies": {
+    "@toruslabs/eccrypto": "^1.1.8",
+    "@toruslabs/tss-lib": "^0.0.1",
     "axios": "^0.27.2",
     "bn.js": "^5.2.1",
-    "@toruslabs/eccrypto": "^1.1.8",
     "keccak256": "^1.0.6",
-    "socket.io-client": "^4.5.1",
-    "tss-lib": "*"
+    "socket.io-client": "^4.5.1"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",
     "cross-env": "^7.0.3",
     "rimraf": "^3.0.2",
     "workerize-loader": "^2.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

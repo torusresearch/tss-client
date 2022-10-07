@@ -1,4 +1,4 @@
-import * as tss from "tss-lib";
+import * as tss from "@toruslabs/tss-lib";
 
 export const instantiate = async (wasmFileUrl) => {
   await tss.default(wasmFileUrl);
