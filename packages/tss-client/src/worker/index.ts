@@ -13,6 +13,7 @@ class TssWebWorker implements TssWorker {
       const worker = createWorker();
       await worker.instantiate(this._wasmUrl);
       const mes = await worker.takeAction(method, args);
+      worker.terminate();
       return mes as T;
     } catch (e) {
       console.error(e);
