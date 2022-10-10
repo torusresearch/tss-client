@@ -2,14 +2,17 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export function process_ga1(a: number, b: number, c: number): void;
+export function test_async(): number;
+export function test_str(a: number, b: number, c: number): void;
+export function test_jsval(a: number, b: number): void;
+export function test_usize(a: number, b: number): void;
+export function everything(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number): number;
 export function random_generator(a: number, b: number, c: number): void;
 export function random_generator_free(a: number): void;
 export function threshold_signer_hack(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number): void;
 export function threshold_signer(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number): void;
 export function threshold_signer_free(a: number): void;
 export function setup(a: number, b: number): number;
-export function parties_hack(a: number, b: number): void;
-export function precompute_hack(a: number, b: number, c: number): number;
 export function precompute(a: number, b: number, c: number): number;
 export function local_sign_hack(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
 export function local_sign(a: number, b: number, c: number, d: number, e: number): void;

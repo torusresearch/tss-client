@@ -10,6 +10,37 @@ export function process_ga1(data: string): string;
 */
 export function batch_size(): number;
 /**
+* @returns {Promise<any>}
+*/
+export function test_async(): Promise<any>;
+/**
+* @param {string} s
+* @returns {any}
+*/
+export function test_str(s: string): any;
+/**
+* @param {any} s
+* @returns {any}
+*/
+export function test_jsval(s: any): any;
+/**
+* @param {number} n
+* @returns {any}
+*/
+export function test_usize(n: number): any;
+/**
+* @param {string} rng_state
+* @param {string} session
+* @param {string} player_index_s
+* @param {string} player_count_s
+* @param {string} threshold_s
+* @param {string} share
+* @param {string} pubkey
+* @param {Uint8Array} parties
+* @returns {Promise<any>}
+*/
+export function everything(rng_state: string, session: string, player_index_s: string, player_count_s: string, threshold_s: string, share: string, pubkey: string, parties: Uint8Array): Promise<any>;
+/**
 * @param {string} state
 * @returns {number}
 */
@@ -48,18 +79,6 @@ export function threshold_signer_free(signer: number): void;
 * @returns {Promise<any>}
 */
 export function setup(signer: number, rng: number): Promise<any>;
-/**
-* @param {Uint8Array} parties
-* @returns {number}
-*/
-export function parties_hack(parties: Uint8Array): number;
-/**
-* @param {number} parties
-* @param {number} signer
-* @param {number} rng
-* @returns {Promise<any>}
-*/
-export function precompute_hack(parties: number, signer: number, rng: number): Promise<any>;
 /**
 * @param {Uint8Array} parties
 * @param {number} signer
@@ -189,14 +208,17 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly process_ga1: (a: number, b: number, c: number) => void;
+  readonly test_async: () => number;
+  readonly test_str: (a: number, b: number, c: number) => void;
+  readonly test_jsval: (a: number, b: number) => void;
+  readonly test_usize: (a: number, b: number) => void;
+  readonly everything: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => number;
   readonly random_generator: (a: number, b: number, c: number) => void;
   readonly random_generator_free: (a: number) => void;
   readonly threshold_signer_hack: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
   readonly threshold_signer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
   readonly threshold_signer_free: (a: number) => void;
   readonly setup: (a: number, b: number) => number;
-  readonly parties_hack: (a: number, b: number) => void;
-  readonly precompute_hack: (a: number, b: number, c: number) => number;
   readonly precompute: (a: number, b: number, c: number) => number;
   readonly local_sign_hack: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly local_sign: (a: number, b: number, c: number, d: number, e: number) => void;
