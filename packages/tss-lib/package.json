@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-lib",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "files": [
     "wasm",
     "browser.js",
@@ -33,5 +33,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "f127539e1841d2532dd23140986c810cd05a258e"
+  "gitHead": "25c272a661dab1946ffe1ea9037bebe114157079"
 }
