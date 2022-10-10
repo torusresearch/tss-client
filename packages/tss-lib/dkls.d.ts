@@ -20,6 +20,16 @@ export function random_generator(state: string): number;
 export function random_generator_free(rng: number): void;
 /**
 * @param {string} session
+* @param {string} player_index_s
+* @param {string} player_count_s
+* @param {string} threshold_s
+* @param {string} share
+* @param {string} pubkey
+* @returns {number}
+*/
+export function threshold_signer_hack(session: string, player_index_s: string, player_count_s: string, threshold_s: string, share: string, pubkey: string): number;
+/**
+* @param {string} session
 * @param {number} player_index
 * @param {number} player_count
 * @param {number} threshold
@@ -40,11 +50,30 @@ export function threshold_signer_free(signer: number): void;
 export function setup(signer: number, rng: number): Promise<any>;
 /**
 * @param {Uint8Array} parties
+* @returns {number}
+*/
+export function parties_hack(parties: Uint8Array): number;
+/**
+* @param {number} parties
+* @param {number} signer
+* @param {number} rng
+* @returns {Promise<any>}
+*/
+export function precompute_hack(parties: number, signer: number, rng: number): Promise<any>;
+/**
+* @param {Uint8Array} parties
 * @param {number} signer
 * @param {number} rng
 * @returns {Promise<any>}
 */
 export function precompute(parties: Uint8Array, signer: number, rng: number): Promise<any>;
+/**
+* @param {string} msg
+* @param {string} hash_only_j
+* @param {string} precompute
+* @returns {any}
+*/
+export function local_sign_hack(msg: string, hash_only_j: string, precompute: string): any;
 /**
 * @param {string} msg
 * @param {boolean} hash_only
@@ -57,6 +86,15 @@ export function local_sign(msg: string, hash_only: boolean, precompute: any): an
 * @returns {any}
 */
 export function get_r_from_precompute(precompute: any): any;
+/**
+* @param {any} msg_j
+* @param {any} hash_only_j
+* @param {any} r
+* @param {any} sig_frags_arr_j
+* @param {any} pubkey_j
+* @returns {any}
+*/
+export function local_verify_hack(msg_j: any, hash_only_j: any, r: any, sig_frags_arr_j: any, pubkey_j: any): any;
 /**
 * @param {string} msg
 * @param {boolean} hash_only
@@ -153,12 +191,17 @@ export interface InitOutput {
   readonly process_ga1: (a: number, b: number, c: number) => void;
   readonly random_generator: (a: number, b: number, c: number) => void;
   readonly random_generator_free: (a: number) => void;
+  readonly threshold_signer_hack: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
   readonly threshold_signer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
   readonly threshold_signer_free: (a: number) => void;
   readonly setup: (a: number, b: number) => number;
+  readonly parties_hack: (a: number, b: number) => void;
+  readonly precompute_hack: (a: number, b: number, c: number) => number;
   readonly precompute: (a: number, b: number, c: number) => number;
+  readonly local_sign_hack: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly local_sign: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly get_r_from_precompute: (a: number, b: number) => void;
+  readonly local_verify_hack: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly local_verify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
   readonly sign: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
   readonly batch_size: () => number;
