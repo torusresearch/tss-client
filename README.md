@@ -38,4 +38,4 @@ cd demo/<folder-name>
 npm i && npm start
 ```
 
-NOTE: If you are using a local wasm file URL, Please copy the client wasm file from `packages/tss-lib/wasm/client.wasm` in your test app dist folder.
+NOTE: If you are using a local wasm file URL, Please copy the client wasm file from `packages/tss-lib/wasm/client.wasm` in your test app dist folder. 
