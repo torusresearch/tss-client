@@ -68,14 +68,14 @@ Copy contents of `dkls.js` into `packages/tss-lib/browser.js`.
 
 Revert any changes to the following functions and exports in `browser.js`:
 ```
-function initSync(module) 
+function initSync(module)
 async function init(input)
 export { initSync, finalizeInit, getImports }
 ```
 
 #### Step 5
 
-Copy rename `dkls_bg.wasm` to `client.wasm` and overwrite `packages/tss-lib/wasm/client.wasm` with it.
+Copy and rename `dkls_bg.wasm` to `client.wasm` and overwrite `packages/tss-lib/wasm/client.wasm` with it.
 
 #### Step 6
 
