@@ -6,7 +6,7 @@ const devMode = process.env.NODE_ENV !== "production";
 module.exports = {
   mode: process.env.NODE_ENV || "production",
   devtool: devMode ? "source-map" : false,
-  entry: "./browser.js",
+  entry: "./dkls.js",
   target: "web",
   output: {
     library: { type: "umd", name: "dkls" },

@@ -5,7 +5,7 @@ Client-side SDK for threshold signing.
 
 ## Setup
 
-1. Download dependencies and link local packages.
+Download dependencies and link local packages.
 ```
 npm install
 npm run bootstrap
@@ -21,7 +21,7 @@ npm run dev
 ```
 
 ### Use local dependecies
-To make `tss-client` use the local development version of `tss-lib`, change the entry for `@toruslabs/tss-lib` in `tss-client/package.json`.
+To make package `tss-client` use the local version of `tss-lib`, open `tss-client/package.json` and change the entry for `@toruslabs/tss-lib`.
 ```
 "@toruslabs/tss-lib": "file:../tss-lib"
 ```
@@ -36,16 +36,14 @@ wasm-pack build --release --target web
 
 2. From the `pkg` subfolder in `dkls`, copy the following files into this repositories' path `packages/tss-lib`.
 ```
+dkls.js
 dkls.d.ts
+dkls_bg.wasm
 dkls_bg.wasm.d.ts
 ```
 
-3. Copy contents of `dkls.js` into `packages/tss-lib/browser.js`.
-Revert any changes to the following functions and exports.
+3. In file `dkls.js`, function `init`, remove the usage of `import.meta.url`. This is necessary to enable running `dkls` in the web worker.
+```ts
+// input = new URL('dkls_bg.wasm', import.meta.url);
+throw new Error('unsupported');
 ```
-function initSync(module)
-async function init(input)
-export { initSync, finalizeInit, getImports }
-```
-
-4. Copy and rename `dkls_bg.wasm` to `client.wasm` and overwrite `packages/tss-lib/wasm/client.wasm` with it.

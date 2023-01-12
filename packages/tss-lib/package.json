@@ -2,10 +2,10 @@
   "name": "@toruslabs/tss-lib",
   "version": "1.2.1",
   "files": [
-    "wasm",
-    "browser.js",
+    "dkls.js",
     "dkls.d.ts",
     "dkls_bg.wasm.d.ts",
+    "dkls_bg.wasm",
     "dist"
   ],
   "main": "dist/dkls.min.js",

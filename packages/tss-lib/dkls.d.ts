@@ -15,6 +15,11 @@ export function batch_size(): number;
 */
 export function random_generator(state: string): number;
 /**
+* Frees the memory allocated for a ChaChaRng struct.
+*
+* # Safety
+*
+* No additional safety considerations are needed.
 * @param {number} rng
 */
 export function random_generator_free(rng: number): void;
@@ -29,6 +34,11 @@ export function random_generator_free(rng: number): void;
 */
 export function threshold_signer(session: string, player_index: number, player_count: number, threshold: number, share: string, pubkey: string): number;
 /**
+* Frees the memory allocated for a ThresholdSigner struct.
+*
+* # Safety
+*
+* No additional safety considerations are needed.
 * @param {number} signer
 */
 export function threshold_signer_free(signer: number): void;
@@ -174,12 +184,12 @@ export interface InitOutput {
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
-  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__ha0b01688533da445: (a: number, b: number, c: number) => void;
+  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h57dae86423622528: (a: number, b: number, c: number) => void;
   readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly wasm_bindgen__convert__closures__invoke3_mut__h1481b0b3a4794987: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke3_mut__h790705ae0141183c: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
-  readonly wasm_bindgen__convert__closures__invoke2_mut__h31f9dc4b753d7d17: (a: number, b: number, c: number, d: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke2_mut__h72e642dcaaa3f802: (a: number, b: number, c: number, d: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
