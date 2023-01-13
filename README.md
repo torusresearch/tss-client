@@ -1,70 +1,51 @@
 
 # TSS-Client-SDK
-Client Side SDK for tss signature verification.
 
-## Installation and setup
+Client-side SDK for threshold signing.
 
-1. Installing node_modules
-```
-yarn
-```
+## Setup
 
-
-2. Bootstrap
+1. Download dependencies and link local packages.
 ```
-yarn bootstrap
-```
-
-3. Running the packages
-```
-yarn run dev
+npm install
+npm run bootstrap
 ```
 
 ## Development
 
-1. Setup any of the demo apps from `demo` folders.
-```
-cd demo/<folder-name>
-```
+### Build
 
-2. Run example app.
+The following command builds the packages and also watches for changes and rebuilds automatically.
 ```
-npm i && npm start
+npm run dev
 ```
 
-NOTE: If you are using a local wasm file URL, Please copy the client wasm file from `packages/tss-lib/wasm/client.wasm` in your test app dist folder.
+### Use local dependecies
+To make `tss-client` use the local development version of `tss-lib`, change the entry for `@toruslabs/tss-lib` in `tss-client/package.json`.
+```
+"@toruslabs/tss-lib": "file:../tss-lib"
+```
 
-### Updating DKLS19
+### Update DKLS19
 
-### Step 1
-Build [DKLS19](https://github.com/torusresearch/dkls) with
+1. Build [DKLS19](https://github.com/torusresearch/dkls) with
 ```
 cd dkls
 wasm-pack build --release --target web
 ```
 
-### Step 2
-From the `pkg` subfolder in `dkls`:
-Copy the following files:
+2. From the `pkg` subfolder in `dkls`, copy the following files into this repositories' path `packages/tss-lib`.
 ```
 dkls.d.ts
 dkls_bg.wasm.d.ts
 ```
-into this repositories' path `packages/tss-lib`.
 
-### Step 3
-Copy contents of `dkls.js` into `packages/tss-lib/browser.js`.
-
-### Step 4
-Revert any changes to the following functions and exports in `browser.js`:
+3. Copy contents of `dkls.js` into `packages/tss-lib/browser.js`.
+Revert any changes to the following functions and exports.
 ```
 function initSync(module)
 async function init(input)
 export { initSync, finalizeInit, getImports }
 ```
 
-### Step 5
-Copy and rename `dkls_bg.wasm` to `client.wasm` and overwrite `packages/tss-lib/wasm/client.wasm` with it.
-
-### Step 6
-Publish changes to npm for packages tss-lib and tss-client.
+4. Copy and rename `dkls_bg.wasm` to `client.wasm` and overwrite `packages/tss-lib/wasm/client.wasm` with it.
