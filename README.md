@@ -27,23 +27,7 @@ To make package `tss-client` use the local version of `tss-lib`, open `tss-clien
 ```
 
 ### Update DKLS19
-
-1. Build [DKLS19](https://github.com/torusresearch/dkls) with
+In subdirectory `packages/tss-lib`, run the following.
 ```
-cd dkls
-wasm-pack build --release --target web
-```
-
-2. From the `pkg` subfolder in `dkls`, copy the following files into this repositories' path `packages/tss-lib`.
-```
-dkls.js
-dkls.d.ts
-dkls_bg.wasm
-dkls_bg.wasm.d.ts
-```
-
-3. In file `dkls.js`, function `init`, remove the usage of `import.meta.url`. This is necessary to enable running `dkls` in the web worker.
-```ts
-// input = new URL('dkls_bg.wasm', import.meta.url);
-throw new Error('unsupported');
+npm run upgrade-dkls <path to dkls crate>
 ```

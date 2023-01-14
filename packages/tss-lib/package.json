@@ -17,7 +17,8 @@
     "dev": "cross-env NODE_ENV=production webpack -c webpack.config.js --watch",
     "build": "npm run clean && npm run build-tss",
     "build-tss": "cross-env NODE_ENV=production webpack -c webpack.config.js",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "upgrade-dkls": "bash scripts/upgrade_dkls.bash"
   },
   "devDependencies": {
     "@babel/core": "~7.18.9",
