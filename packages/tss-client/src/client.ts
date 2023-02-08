@@ -1,6 +1,6 @@
 import { generatePrivate } from "@toruslabs/eccrypto";
 import * as TssLib from "@toruslabs/tss-lib";
-import axios from "axios";
+// import axios from "axios";
 import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
@@ -71,13 +71,27 @@ if (globalThis.js_send_msg === undefined) {
       });
     } else {
       const endpoint = tss_client.lookupEndpoint(session, party);
-      axios.post(`${endpoint}/send`, {
-        session,
-        sender: self_index,
-        recipient: party,
-        msg_type,
-        msg_data,
+      fetch(`${endpoint}/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session,
+          sender: self_index,
+          recipient: party,
+          msg_type,
+          msg_data,
+        }),
       });
+
+      // axios.post(`${endpoint}/send`, {
+      //   session,
+      //   sender: self_index,
+      //   recipient: party,
+      //   msg_type,
+      //   msg_data,
+      // });
     }
     return true;
   };
@@ -243,23 +257,47 @@ export class Client {
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
       if (party !== this.index) {
-        axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-          endpoints: this.endpoints.map((endpoint, j) => {
-            if (j !== this.index) {
-              return endpoint;
-            }
-            // pass in different id for websocket connection for each server so that the server can communicate back
-            return `websocket:${this.sockets[party].id}`;
+        fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoints: this.endpoints.map((endpoint, j) => {
+              if (j !== this.index) {
+                return endpoint;
+              }
+              // pass in different id for websocket connection for each server so that the server can communicate back
+              return `websocket:${this.sockets[party].id}`;
+            }),
+            session: this.session,
+            parties: this.parties,
+            player_index: party,
+            threshold: this.parties.length,
+            pubkey: this.pubKey,
+            notifyWebsocketId: this.sockets[party].id,
+            sendWebsocket: this.sockets[party].id,
+            ...additionalParams,
           }),
-          session: this.session,
-          parties: this.parties,
-          player_index: party,
-          threshold: this.parties.length,
-          pubkey: this.pubKey,
-          notifyWebsocketId: this.sockets[party].id,
-          sendWebsocket: this.sockets[party].id,
-          ...additionalParams,
         });
+
+        // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+        //   endpoints: this.endpoints.map((endpoint, j) => {
+        //     if (j !== this.index) {
+        //       return endpoint;
+        //     }
+        //     // pass in different id for websocket connection for each server so that the server can communicate back
+        //     return `websocket:${this.sockets[party].id}`;
+        //   }),
+        //   session: this.session,
+        //   parties: this.parties,
+        //   player_index: party,
+        //   threshold: this.parties.length,
+        //   pubkey: this.pubKey,
+        //   notifyWebsocketId: this.sockets[party].id,
+        //   sendWebsocket: this.sockets[party].id,
+        //   ...additionalParams,
+        // });
       }
     }
     tss
@@ -313,8 +351,12 @@ export class Client {
       if (precompute === "precompute_complete") {
         const endpoint = this.lookupEndpoint(this.session, party);
         sigFragmentsPromises.push(
-          axios
-            .post(`${endpoint}/sign`, {
+          fetch(`${endpoint}/sign`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
               session: this.session,
               sender: this.index,
               recipient: party,
@@ -323,8 +365,23 @@ export class Client {
               original_message,
               hash_algo,
               ...additionalParams,
-            })
-            .then((res) => res.data.sig)
+            }),
+          })
+            .then((res) => res.json())
+            .then((res) => res.sig)
+
+          // axios
+          //   .post(`${endpoint}/sign`, {
+          //     session: this.session,
+          //     sender: this.index,
+          //     recipient: party,
+          //     msg,
+          //     hash_only,
+          //     original_message,
+          //     hash_algo,
+          //     ...additionalParams,
+          //   })
+          //   .then((res) => res.data.sig)
         );
       } else {
         sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
@@ -359,7 +416,14 @@ export class Client {
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
-          return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
+          return fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ session: this.session, ...additionalParams }),
+          });
+          // return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
         }
         return Promise.resolve(true);
       })
