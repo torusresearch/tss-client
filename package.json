@@ -30,7 +30,7 @@
     "@babel/preset-typescript": "^7.18.6",
     "@babel/runtime": "~7.19.0",
     "@toruslabs/eslint-config-typescript": "^1.1.2",
-    "@toruslabs/torus-scripts": "^1.2.2",
+    "@toruslabs/torus-scripts": "^3.0.2",
     "@typescript-eslint/eslint-plugin": "^5.38.1",
     "assert": "^2.0.0",
     "babel-loader": "^8.2.5",
