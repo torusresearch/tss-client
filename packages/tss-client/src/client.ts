@@ -5,6 +5,7 @@ import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
 
+import { WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
@@ -71,13 +72,17 @@ if (globalThis.js_send_msg === undefined) {
       });
     } else {
       const endpoint = tss_client.lookupEndpoint(session, party);
-      axios.post(`${endpoint}/send`, {
-        session,
-        sender: self_index,
-        recipient: party,
-        msg_type,
-        msg_data,
-      });
+      axios.post(
+        `${endpoint}/send`,
+        {
+          session,
+          sender: self_index,
+          recipient: party,
+          msg_type,
+          msg_data,
+        },
+        { headers: { [WEB3_SESSION_HEADER_KEY]: session } }
+      );
     }
     return true;
   };
@@ -243,7 +248,7 @@ export class Client {
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
       if (party !== this.index) {
-        axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+        this._post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
           endpoints: this.endpoints.map((endpoint, j) => {
             if (j !== this.index) {
               return endpoint;
@@ -313,18 +318,16 @@ export class Client {
       if (precompute === "precompute_complete") {
         const endpoint = this.lookupEndpoint(this.session, party);
         sigFragmentsPromises.push(
-          axios
-            .post(`${endpoint}/sign`, {
-              session: this.session,
-              sender: this.index,
-              recipient: party,
-              msg,
-              hash_only,
-              original_message,
-              hash_algo,
-              ...additionalParams,
-            })
-            .then((res) => res.data.sig)
+          this._post(`${endpoint}/sign`, {
+            session: this.session,
+            sender: this.index,
+            recipient: party,
+            msg,
+            hash_only,
+            original_message,
+            hash_algo,
+            ...additionalParams,
+          }).then((res) => res.data.sig)
         );
       } else {
         sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
@@ -359,10 +362,14 @@ export class Client {
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
-          return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
+          return this._post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
         }
         return Promise.resolve(true);
       })
     );
+  }
+
+  private _post(url: string, data: Record<string, unknown>, headers: Record<string, string> = {}): Promise<any> {
+    return axios.post(url, data, { headers: { ...headers, [WEB3_SESSION_HEADER_KEY]: this.session } });
   }
 }
