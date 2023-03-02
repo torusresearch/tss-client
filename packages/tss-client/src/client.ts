@@ -8,7 +8,7 @@ import { Socket } from "socket.io-client";
 import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
-// TODO: create namespace for globals.
+// TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
   globalThis.tss_clients = {};
 }
