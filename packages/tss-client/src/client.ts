@@ -5,7 +5,7 @@ import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
 
-import { WEB3_SESSION_HEADER_KEY } from "./constants";
+import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
@@ -227,6 +227,10 @@ export class Client {
     globalThis.tss_clients[this.session] = this;
   }
 
+  get sid(): string {
+    return this.session.split(DELIMITERS.Delimiter4)[1];
+  }
+
   async ready() {
     await this._readyPromiseAll;
   }
@@ -370,6 +374,6 @@ export class Client {
   }
 
   private _post(url: string, data: Record<string, unknown>, headers: Record<string, string> = {}): Promise<any> {
-    return axios.post(url, data, { headers: { ...headers, [WEB3_SESSION_HEADER_KEY]: this.session } });
+    return axios.post(url, data, { headers: { ...headers, [WEB3_SESSION_HEADER_KEY]: this.sid } });
   }
 }
