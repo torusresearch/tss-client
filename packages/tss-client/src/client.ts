@@ -1,6 +1,6 @@
 import { generatePrivate } from "@toruslabs/eccrypto";
 import * as TssLib from "@toruslabs/tss-lib";
-import axios from "axios";
+// import axios from "axios";
 import BN from "bn.js";
 import keccak256 from "keccak256";
 import { Socket } from "socket.io-client";
@@ -9,7 +9,7 @@ import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./types";
 import TssWebWorker from "./worker";
 
-// TODO: create namespace for globals.
+// TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
   globalThis.tss_clients = {};
 }
@@ -72,17 +72,28 @@ if (globalThis.js_send_msg === undefined) {
       });
     } else {
       const endpoint = tss_client.lookupEndpoint(session, party);
-      axios.post(
-        `${endpoint}/send`,
-        {
+      fetch(`${endpoint}/send`, {
+        method: "POST",
+        headers: {
+          [WEB3_SESSION_HEADER_KEY]: session,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           session,
           sender: self_index,
           recipient: party,
           msg_type,
           msg_data,
-        },
-        { headers: { [WEB3_SESSION_HEADER_KEY]: session } }
-      );
+        }),
+      });
+
+      // axios.post(`${endpoint}/send`, {
+      //   session,
+      //   sender: self_index,
+      //   recipient: party,
+      //   msg_type,
+      //   msg_data,
+      // });
     }
     return true;
   };
@@ -252,23 +263,47 @@ export class Client {
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
       if (party !== this.index) {
-        this._post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-          endpoints: this.endpoints.map((endpoint, j) => {
-            if (j !== this.index) {
-              return endpoint;
-            }
-            // pass in different id for websocket connection for each server so that the server can communicate back
-            return `websocket:${this.sockets[party].id}`;
+        fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoints: this.endpoints.map((endpoint, j) => {
+              if (j !== this.index) {
+                return endpoint;
+              }
+              // pass in different id for websocket connection for each server so that the server can communicate back
+              return `websocket:${this.sockets[party].id}`;
+            }),
+            session: this.session,
+            parties: this.parties,
+            player_index: party,
+            threshold: this.parties.length,
+            pubkey: this.pubKey,
+            notifyWebsocketId: this.sockets[party].id,
+            sendWebsocket: this.sockets[party].id,
+            ...additionalParams,
           }),
-          session: this.session,
-          parties: this.parties,
-          player_index: party,
-          threshold: this.parties.length,
-          pubkey: this.pubKey,
-          notifyWebsocketId: this.sockets[party].id,
-          sendWebsocket: this.sockets[party].id,
-          ...additionalParams,
         });
+
+        // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+        //   endpoints: this.endpoints.map((endpoint, j) => {
+        //     if (j !== this.index) {
+        //       return endpoint;
+        //     }
+        //     // pass in different id for websocket connection for each server so that the server can communicate back
+        //     return `websocket:${this.sockets[party].id}`;
+        //   }),
+        //   session: this.session,
+        //   parties: this.parties,
+        //   player_index: party,
+        //   threshold: this.parties.length,
+        //   pubkey: this.pubKey,
+        //   notifyWebsocketId: this.sockets[party].id,
+        //   sendWebsocket: this.sockets[party].id,
+        //   ...additionalParams,
+        // });
       }
     }
     tss
@@ -322,16 +357,37 @@ export class Client {
       if (precompute === "precompute_complete") {
         const endpoint = this.lookupEndpoint(this.session, party);
         sigFragmentsPromises.push(
-          this._post(`${endpoint}/sign`, {
-            session: this.session,
-            sender: this.index,
-            recipient: party,
-            msg,
-            hash_only,
-            original_message,
-            hash_algo,
-            ...additionalParams,
-          }).then((res) => res.data.sig)
+          fetch(`${endpoint}/sign`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              session: this.session,
+              sender: this.index,
+              recipient: party,
+              msg,
+              hash_only,
+              original_message,
+              hash_algo,
+              ...additionalParams,
+            }),
+          })
+            .then((res) => res.json())
+            .then((res) => res.sig)
+
+          // axios
+          //   .post(`${endpoint}/sign`, {
+          //     session: this.session,
+          //     sender: this.index,
+          //     recipient: party,
+          //     msg,
+          //     hash_only,
+          //     original_message,
+          //     hash_algo,
+          //     ...additionalParams,
+          //   })
+          //   .then((res) => res.data.sig)
         );
       } else {
         sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
@@ -366,14 +422,17 @@ export class Client {
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
-          return this._post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
+          return fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ session: this.session, ...additionalParams }),
+          });
+          // return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
         }
         return Promise.resolve(true);
       })
     );
-  }
-
-  private _post(url: string, data: Record<string, unknown>, headers: Record<string, string> = {}): Promise<any> {
-    return axios.post(url, data, { headers: { ...headers, [WEB3_SESSION_HEADER_KEY]: this.sid } });
   }
 }

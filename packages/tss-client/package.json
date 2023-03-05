@@ -20,8 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@toruslabs/eccrypto": "^1.1.8",
-    "@toruslabs/tss-lib": "^1.2.1",
-    "axios": "^0.27.2",
+    "@toruslabs/tss-lib": "^1.2.0",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
     "keccak256": "^1.0.6",
@@ -36,5 +35,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "e96c687122b5b64601b14252a68467ecbe5743fd"
+  "gitHead": "e184013697645fa417ae5452763e4ddd97a3c56b"
 }
