@@ -23,6 +23,7 @@
     "@toruslabs/tss-lib": "^1.2.1",
     "axios": "^0.27.2",
     "bn.js": "^5.2.1",
+    "elliptic": "^6.5.4",
     "keccak256": "^1.0.6",
     "socket.io-client": "^4.5.1"
   },
