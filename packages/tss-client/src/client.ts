@@ -7,6 +7,7 @@ import { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./types";
+import { getEc } from "./utils";
 import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
@@ -144,6 +145,8 @@ export class Client {
 
   public _workerSupported: string;
 
+  public _sLessThanHalf: boolean;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
@@ -186,6 +189,7 @@ export class Client {
     this._ready = false;
     this._consumed = false;
     this._workerSupported = "unsupported";
+    this._sLessThanHalf = true;
 
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
@@ -403,8 +407,16 @@ export class Client {
     const sig = tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
-    const s = new BN(sigHex.slice(64), 16);
-    const recoveryParam = Buffer.from(R, "base64")[63] % 2;
+    let s = new BN(sigHex.slice(64), 16);
+    let recoveryParam = Buffer.from(R, "base64")[63] % 2;
+    if (this._sLessThanHalf) {
+      const ec = getEc();
+      const halfOfSecp256k1n = ec.n.div(new BN(2));
+      if (s.gt(halfOfSecp256k1n)) {
+        s = ec.n.sub(s);
+        recoveryParam = (recoveryParam + 1) % 2;
+      }
+    }
     this._endSignTime = Date.now();
     return { r, s, recoveryParam };
   }
