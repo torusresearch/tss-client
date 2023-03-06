@@ -20,7 +20,7 @@ if (globalThis.js_read_msg === undefined) {
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
       // runs ga1_array processing on a web worker instead of blocking the main thread
-      return "unsupported";
+      return tss_client._workerSupported || "unsupported";
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -142,6 +142,8 @@ export class Client {
 
   public _consumed: boolean;
 
+  public _workerSupported: string;
+
   private _readyResolves = [];
 
   private _readyPromises = [];
@@ -183,6 +185,7 @@ export class Client {
     this.log = console.log;
     this._ready = false;
     this._consumed = false;
+    this._workerSupported = "unsupported";
 
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
