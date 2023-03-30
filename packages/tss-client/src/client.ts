@@ -274,7 +274,7 @@ export class Client {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-web3-session-id": this.sid,
+            [WEB3_SESSION_HEADER_KEY]: this.sid,
           },
           body: JSON.stringify({
             endpoints: this.endpoints.map((endpoint, j) => {
@@ -369,7 +369,7 @@ export class Client {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-web3-session-id": this.sid,
+              [WEB3_SESSION_HEADER_KEY]: this.sid,
             },
             body: JSON.stringify({
               session: this.session,
@@ -443,7 +443,7 @@ export class Client {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-web3-session-id": this.sid,
+              [WEB3_SESSION_HEADER_KEY]: this.sid,
             },
             body: JSON.stringify({ session: this.session, ...additionalParams }),
           });
