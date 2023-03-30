@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-client",
-  "version": "1.2.7-alpha.0",
+  "version": "1.4.0-alpha.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
     "dist"
@@ -19,7 +19,7 @@
   "author": "Web3Auth",
   "license": "ISC",
   "dependencies": {
-    "@toruslabs/eccrypto": "^1.1.8",
+    "@toruslabs/eccrypto": "^2.1.1",
     "@toruslabs/tss-lib": "^1.2.0",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
