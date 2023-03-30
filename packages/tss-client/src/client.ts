@@ -76,7 +76,7 @@ if (globalThis.js_send_msg === undefined) {
       fetch(`${endpoint}/send`, {
         method: "POST",
         headers: {
-          [WEB3_SESSION_HEADER_KEY]: session,
+          [WEB3_SESSION_HEADER_KEY]: this.sid,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -274,6 +274,7 @@ export class Client {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            [WEB3_SESSION_HEADER_KEY]: this.sid,
           },
           body: JSON.stringify({
             endpoints: this.endpoints.map((endpoint, j) => {
@@ -368,6 +369,7 @@ export class Client {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              [WEB3_SESSION_HEADER_KEY]: this.sid,
             },
             body: JSON.stringify({
               session: this.session,
@@ -441,6 +443,7 @@ export class Client {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              [WEB3_SESSION_HEADER_KEY]: this.sid,
             },
             body: JSON.stringify({ session: this.session, ...additionalParams }),
           });
