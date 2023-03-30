@@ -3,11 +3,11 @@ import { ec as EC } from "elliptic";
 import { io, Socket } from "socket.io-client";
 
 export const torusNodeEndpoints = [
-  "https://sapphire-dev-2-1.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-2.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-3.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-4.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-5.authnetwork.dev/sss/jrpc",
+  "https://sapphire-1.auth.network/sss/jrpc",
+  "https://sapphire-2.auth.network/sss/jrpc",
+  "https://sapphire-3.auth.network/sss/jrpc",
+  "https://sapphire-4.auth.network/sss/jrpc",
+  "https://sapphire-5.auth.network/sss/jrpc",
 ];
 
 export function getEc(): any {
@@ -99,10 +99,10 @@ export const createSockets = async (wsEndpoints: string[]): Promise<Socket[]> =>
     }
     return io(wsEndpoint, {
       path: "/tss/socket.io",
-      transports: ["websocket", "polling"],
+      transports: ["websocket"],
       withCredentials: true,
       reconnectionDelayMax: 10000,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 0,
     });
   });
 };
@@ -127,8 +127,8 @@ export const generateEndpoints = (parties: number, clientIndex: number) => {
       endpoints.push(null as any);
       tssWSEndpoints.push(null as any);
     } else {
-      endpoints.push(`https://sapphire-dev-2-${i + 1}.authnetwork.dev/tss`);
-      tssWSEndpoints.push(`https://sapphire-dev-2-${i + 1}.authnetwork.dev`);
+      endpoints.push(`https://sapphire-${i + 1}.auth.network/tss`);
+      tssWSEndpoints.push(`https://sapphire-${i + 1}.auth.network`);
     }
   }
   return { endpoints, tssWSEndpoints, partyIndexes };
