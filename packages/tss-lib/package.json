@@ -1,37 +1,12 @@
 {
-  "name": "@toruslabs/tss-lib",
-  "version": "1.2.1",
+  "name": "dkls",
+  "version": "0.1.0",
   "files": [
-    "wasm",
-    "browser.js",
-    "dkls.d.ts",
-    "dkls_bg.wasm.d.ts",
-    "dist"
+    "dkls_bg.wasm",
+    "dkls.js",
+    "dkls.d.ts"
   ],
-  "main": "dist/dkls.min.js",
-  "browser": "dist/dkls.min.js",
+  "module": "dkls.js",
   "types": "dkls.d.ts",
-  "scripts": {
-    "clean": "rimraf ./dist",
-    "depcheck": "depcheck .",
-    "dev": "cross-env NODE_ENV=production webpack -c webpack.config.js --watch",
-    "build": "npm run clean && npm run build-tss",
-    "build-tss": "cross-env NODE_ENV=production webpack -c webpack.config.js",
-    "prepack": "npm run build"
-  },
-  "devDependencies": {
-    "@babel/core": "~7.18.9",
-    "@babel/plugin-proposal-class-properties": "^7.18.6",
-    "@babel/plugin-proposal-object-rest-spread": "^7.18.9",
-    "@babel/plugin-transform-runtime": "~7.18.9",
-    "@babel/preset-env": "^7.18.9",
-    "babel-loader": "^8.2.5",
-    "cross-env": "^7.0.3",
-    "rimraf": "^3.0.2",
-    "webpack": "^5.73.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "gitHead": "e96c687122b5b64601b14252a68467ecbe5743fd"
+  "sideEffects": false
 }
