@@ -435,7 +435,11 @@ export class Client {
 
     // remove references
     delete globalThis.tss_clients[this.session];
-
+    this.sockets.map((soc) => {
+      if (soc && soc.connected) {
+        soc.close();
+      }
+    });
     await Promise.all(
       this.parties.map((party) => {
         if (party !== this.index) {
