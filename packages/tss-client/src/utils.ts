@@ -2,14 +2,6 @@ import BN from "bn.js";
 import { ec as EC } from "elliptic";
 import { io, Socket } from "socket.io-client";
 
-export const torusNodeEndpoints = [
-  "https://sapphire-1.auth.network/sss/jrpc",
-  "https://sapphire-2.auth.network/sss/jrpc",
-  "https://sapphire-3.auth.network/sss/jrpc",
-  "https://sapphire-4.auth.network/sss/jrpc",
-  "https://sapphire-5.auth.network/sss/jrpc",
-];
-
 export function getEc(): any {
   return new EC("secp256k1");
 }
@@ -100,10 +92,10 @@ export const createSockets = async (wsEndpoints: string[], sessionId: string): P
     return io(wsEndpoint, {
       path: "/tss/socket.io",
       query: { sessionId },
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       withCredentials: true,
       reconnectionDelayMax: 10000,
-      reconnectionAttempts: 0,
+      reconnectionAttempts: 5,
     });
   });
 };
