@@ -19,17 +19,18 @@
   "author": "Web3Auth",
   "license": "ISC",
   "dependencies": {
-    "@toruslabs/eccrypto": "^2.1.1",
+    "@toruslabs/eccrypto": "^4.0.0",
     "@toruslabs/tss-lib": "^1.6.0-alpha.0",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
     "keccak256": "^1.0.6",
-    "socket.io-client": "^4.5.1"
+    "socket.io-client": "^4.7.2"
   },
   "devDependencies": {
-    "@types/bn.js": "^5.1.1",
+    "@types/elliptic": "^6.4.15",
+    "@types/bn.js": "^5.1.2",
     "cross-env": "^7.0.3",
-    "rimraf": "^3.0.2",
+    "rimraf": "^5.0.5",
     "workerize-loader": "^2.0.2"
   },
   "publishConfig": {

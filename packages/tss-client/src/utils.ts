@@ -1,8 +1,10 @@
 import BN from "bn.js";
-import { ec as EC } from "elliptic";
+import { curve, ec as EC } from "elliptic";
 import { io, Socket } from "socket.io-client";
 
-export function getEc(): any {
+import { PointHex } from "./types";
+
+export function getEc(): EC {
   return new EC("secp256k1");
 }
 
@@ -27,7 +29,7 @@ export function getLagrangeCoeffs(_allIndexes: number[] | BN[], _myIndex: number
   return upper.mul(lower.invm(ec.curve.n)).umod(ec.curve.n);
 }
 
-export function ecPoint(p: { x: string; y: string }): any {
+export function ecPoint(p: { x: string; y: string }): curve.base.BasePoint {
   const ec = getEc();
   return ec.keyFromPublic({ x: p.x.padStart(64, "0"), y: p.y.padStart(64, "0") }).getPublic();
 }
@@ -87,7 +89,7 @@ export const getDKLSCoeff = (isUser: boolean, participatingServerIndexes: number
 export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
   return wsEndpoints.map((wsEndpoint) => {
     if (wsEndpoint === null || wsEndpoint === undefined) {
-      return null as any;
+      return null;
     }
     return io(wsEndpoint, {
       path: "/tss/socket.io",
@@ -102,7 +104,7 @@ export const createSockets = async (wsEndpoints: string[], sessionId: string): P
 
 type key = { x: string; y: string };
 
-export function getTSSPubKey(dkgPubKey: any, userSharePubKey: key, userTSSIndex: number): any {
+export function getTSSPubKey(dkgPubKey: PointHex, userSharePubKey: key, userTSSIndex: number): curve.base.BasePoint {
   const serverLagrangeCoeff = getLagrangeCoeffs([1, userTSSIndex], 1);
   const userLagrangeCoeff = getLagrangeCoeffs([1, userTSSIndex], userTSSIndex);
   const serverTerm = ecPoint(dkgPubKey).mul(serverLagrangeCoeff);
@@ -111,14 +113,14 @@ export function getTSSPubKey(dkgPubKey: any, userSharePubKey: key, userTSSIndex:
 }
 
 export const generateEndpoints = (parties: number, clientIndex: number) => {
-  const endpoints: string[] = [];
-  const tssWSEndpoints: string[] = [];
+  const endpoints: (string | null)[] = [];
+  const tssWSEndpoints: (string | null)[] = [];
   const partyIndexes: number[] = [];
   for (let i = 0; i < parties; i++) {
     partyIndexes.push(i);
     if (i === clientIndex) {
-      endpoints.push(null as any);
-      tssWSEndpoints.push(null as any);
+      endpoints.push(null);
+      tssWSEndpoints.push(null);
     } else {
       endpoints.push(`https://sapphire-${i + 1}.auth.network/tss`);
       tssWSEndpoints.push(`https://sapphire-${i + 1}.auth.network`);
