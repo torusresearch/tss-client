@@ -7,10 +7,15 @@ export interface Msg {
 }
 
 export interface TssWorker {
-  work: (method: string, args: string[]) => Promise<any>;
+  work: <T>(method: string, args: string[]) => Promise<T>;
 }
 
 export interface DB {
   get: (key: string) => Promise<string>;
   set: (key: string, value: string) => Promise<void>;
 }
+
+export type PointHex = {
+  x: string;
+  y: string;
+};

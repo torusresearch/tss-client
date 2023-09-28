@@ -16,7 +16,7 @@ if (globalThis.tss_clients === undefined) {
 }
 
 if (globalThis.js_read_msg === undefined) {
-  globalThis.js_read_msg = async function (session, self_index, party, msg_type) {
+  globalThis.js_read_msg = async function (session: string, self_index: number, party: number, msg_type: string) {
     const tss_client = globalThis.tss_clients[session] as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
@@ -25,7 +25,7 @@ if (globalThis.js_read_msg === undefined) {
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
-      return new Promise((resolve) => {
+      return new Promise((resolve: (value: string | PromiseLike<string>) => void) => {
         tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`] = resolve;
       });
     }
@@ -40,7 +40,7 @@ globalThis.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise
 };
 
 if (globalThis.js_send_msg === undefined) {
-  globalThis.js_send_msg = async function (session, self_index, party, msg_type, msg_data) {
+  globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
     const tss_client = globalThis.tss_clients[session] as Client;
     tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
@@ -72,11 +72,12 @@ if (globalThis.js_send_msg === undefined) {
         msg_data,
       });
     } else {
+      const sid = session.split(DELIMITERS.Delimiter4)[1];
       const endpoint = tss_client.lookupEndpoint(session, party);
       fetch(`${endpoint}/send`, {
         method: "POST",
         headers: {
-          [WEB3_SESSION_HEADER_KEY]: this.sid,
+          [WEB3_SESSION_HEADER_KEY]: sid,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -87,14 +88,6 @@ if (globalThis.js_send_msg === undefined) {
           msg_data,
         }),
       });
-
-      // axios.post(`${endpoint}/send`, {
-      //   session,
-      //   sender: self_index,
-      //   recipient: party,
-      //   msg_type,
-      //   msg_data,
-      // });
     }
     return true;
   };
@@ -113,7 +106,7 @@ export class Client {
 
   public msgQueue: Msg[] = [];
 
-  public pendingReads = {};
+  public pendingReads: Record<string, (value: string | PromiseLike<string>) => void | string> = {};
 
   public sockets: Socket[];
 
@@ -147,9 +140,9 @@ export class Client {
 
   public _sLessThanHalf: boolean;
 
-  private _readyResolves = [];
+  private _readyResolves: ((value: unknown) => void)[] = [];
 
-  private _readyPromises = [];
+  private _readyPromises: Promise<unknown>[] = [];
 
   private _readyPromiseAll: Promise<unknown>;
 
@@ -194,7 +187,11 @@ export class Client {
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
         let clientResolve;
-        this._readyPromises.push(new Promise((r) => (clientResolve = r)));
+        this._readyPromises.push(
+          new Promise((r) => {
+            clientResolve = r;
+          })
+        );
         this._readyResolves.push(clientResolve);
         return;
       }
@@ -203,8 +200,12 @@ export class Client {
       }
 
       // create pending promises for each server that resolves when precompute for that server is complete
-      let resolve;
-      this._readyPromises.push(new Promise((r) => (resolve = r)));
+      let resolve: (value: unknown) => void;
+      this._readyPromises.push(
+        new Promise((r) => {
+          resolve = r;
+        })
+      );
       this._readyResolves.push(resolve);
 
       // Add listener for incoming messages
@@ -233,7 +234,7 @@ export class Client {
         }
         if (cb) cb();
         this.precomputes[this.parties.indexOf(party)] = "precompute_complete";
-        resolve();
+        resolve(null);
       });
     });
 
@@ -321,7 +322,7 @@ export class Client {
       })
       .then((precompute) => {
         this.precomputes[this.parties.indexOf(this.index)] = precompute;
-        this._readyResolves[this.parties.indexOf(this.index)]();
+        this._readyResolves[this.parties.indexOf(this.index)](null);
         return null;
       });
   }
@@ -428,7 +429,7 @@ export class Client {
     return this.endpoints[party];
   }
 
-  async cleanup(tss: typeof TssLib, additionalParams?: Record<string, any>) {
+  async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
     // free rust objects
     tss.random_generator_free(this._rng);
     tss.threshold_signer_free(this._signer);
@@ -451,7 +452,6 @@ export class Client {
             },
             body: JSON.stringify({ session: this.session, ...additionalParams }),
           });
-          // return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
         }
         return Promise.resolve(true);
       })
