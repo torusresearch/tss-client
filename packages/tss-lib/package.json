@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-lib",
-  "version": "1.6.0-alpha.0",
+  "version": "1.7.0",
   "files": [
     "wasm",
     "browser.js",
