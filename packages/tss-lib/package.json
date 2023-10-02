@@ -8,27 +8,14 @@
     "dkls_bg.wasm.d.ts",
     "dist"
   ],
-  "main": "dist/dkls.min.js",
-  "browser": "dist/dkls.min.js",
+  "main": "dist/tssLib.cjs.js",
+  "module": "dist/tssLib.esm.js",
   "types": "dkls.d.ts",
   "scripts": {
-    "clean": "rimraf ./dist",
     "depcheck": "depcheck .",
-    "dev": "cross-env NODE_ENV=production webpack -c webpack.config.js --watch",
-    "build": "npm run clean && npm run build-tss",
-    "build-tss": "cross-env NODE_ENV=production webpack -c webpack.config.js",
+    "dev": "torus-scripts start",
+    "build": "torus-scripts build",
     "prepack": "npm run build"
-  },
-  "devDependencies": {
-    "@babel/core": "~7.23.0",
-    "@babel/plugin-proposal-class-properties": "^7.18.6",
-    "@babel/plugin-proposal-object-rest-spread": "^7.18.9",
-    "@babel/plugin-transform-runtime": "~7.22.15",
-    "@babel/preset-env": "^7.22.20",
-    "babel-loader": "^9.1.3",
-    "cross-env": "^7.0.3",
-    "rimraf": "^5.0.5",
-    "webpack": "^5.88.2"
   },
   "publishConfig": {
     "access": "public"

@@ -1,23 +1,24 @@
+/* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
 import * as TssLib from "@toruslabs/tss-lib";
-// import axios from "axios";
 import BN from "bn.js";
-import keccak256 from "keccak256";
+import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
-import { Msg } from "./types";
+import { Msg } from "./interfaces";
 import { getEc } from "./utils";
 import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
-  globalThis.tss_clients = {};
+  // Cleanup leads to memory leaks with just an object. Should use a map instead.
+  globalThis.tss_clients = new Map();
 }
 
 if (globalThis.js_read_msg === undefined) {
   globalThis.js_read_msg = async function (session: string, self_index: number, party: number, msg_type: string) {
-    const tss_client = globalThis.tss_clients[session] as Client;
+    const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
       // runs ga1_array processing on a web worker instead of blocking the main thread
@@ -26,7 +27,7 @@ if (globalThis.js_read_msg === undefined) {
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
       return new Promise((resolve: (value: string | PromiseLike<string>) => void) => {
-        tss_client.pendingReads[`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`] = resolve;
+        tss_client.pendingReads.set(`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`, resolve);
       });
     }
     return mm.msg_data;
@@ -41,25 +42,28 @@ globalThis.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise
 
 if (globalThis.js_send_msg === undefined) {
   globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
-    const tss_client = globalThis.tss_clients[session] as Client;
+    const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      globalThis.process_ga1(tss_client.tssImportUrl, msg_data).then((processed_data: string) => {
-        const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
-        const pendingRead = tss_client.pendingReads[key];
-        if (pendingRead !== undefined) {
-          pendingRead(processed_data);
-        } else {
-          tss_client.msgQueue.push({
-            session,
-            sender: party,
-            recipient: self_index,
-            msg_type: `${session}~ga1_data_processed`,
-            msg_data: processed_data,
-          });
-        }
-        return true;
-      });
+      globalThis
+        .process_ga1(tss_client.tssImportUrl, msg_data)
+        .then((processed_data: string) => {
+          const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
+          const pendingRead = tss_client.pendingReads.get(key);
+          if (pendingRead !== undefined) {
+            pendingRead(processed_data);
+          } else {
+            tss_client.msgQueue.push({
+              session,
+              sender: party,
+              recipient: self_index,
+              msg_type: `${session}~ga1_data_processed`,
+              msg_data: processed_data,
+            });
+          }
+          return true;
+        })
+        .catch((err) => console.error(err));
       return true;
     }
     if (tss_client.websocketOnly) {
@@ -106,7 +110,7 @@ export class Client {
 
   public msgQueue: Msg[] = [];
 
-  public pendingReads: Record<string, (value: string | PromiseLike<string>) => void | string> = {};
+  public pendingReads: Map<string, (value: string | PromiseLike<string>) => void | string> = new Map();
 
   public sockets: Socket[];
 
@@ -184,10 +188,11 @@ export class Client {
     this._workerSupported = "unsupported";
     this._sLessThanHalf = true;
 
-    _sockets.map((socket) => {
+    _sockets.forEach((socket) => {
       if (socket === undefined || socket === null) {
         let clientResolve;
         this._readyPromises.push(
+          // eslint-disable-next-line promise/param-names
           new Promise((r) => {
             clientResolve = r;
           })
@@ -202,6 +207,7 @@ export class Client {
       // create pending promises for each server that resolves when precompute for that server is complete
       let resolve: (value: unknown) => void;
       this._readyPromises.push(
+        // eslint-disable-next-line promise/param-names
         new Promise((r) => {
           resolve = r;
         })
@@ -215,7 +221,7 @@ export class Client {
           this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
-        const pendingRead = this.pendingReads[`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`];
+        const pendingRead = this.pendingReads.get(`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`);
         if (pendingRead !== undefined) {
           // globalThis.total_incoming += msg_data.length;
           // globalThis.total_incoming_msg.push(msg_data);
@@ -243,7 +249,7 @@ export class Client {
       this._endPrecomputeTime = Date.now();
       return null;
     });
-    globalThis.tss_clients[this.session] = this;
+    globalThis.tss_clients.set(this.session, this);
   }
 
   get sid(): string {
@@ -260,7 +266,7 @@ export class Client {
     this._rng = tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
     // check if sockets have connected and have an id;
-    this.sockets.map((socket, party) => {
+    this.sockets.forEach((socket, party) => {
       if (socket !== null) {
         if (socket.id === undefined) {
           throw new Error(`socket not connected yet, session: ${this.session}, party: ${party}`);
@@ -324,7 +330,8 @@ export class Client {
         this.precomputes[this.parties.indexOf(this.index)] = precompute;
         this._readyResolves[this.parties.indexOf(this.index)](null);
         return null;
-      });
+      })
+      .catch(console.error);
   }
 
   async sign(
@@ -350,7 +357,7 @@ export class Client {
     // check message hashing
     if (!hash_only) {
       if (hash_algo === "keccak256") {
-        if (keccak256(original_message).toString("base64") !== msg) {
+        if (Buffer.from(keccak256(Buffer.from(original_message))).toString("base64") !== msg) {
           throw new Error("hash of original message does not match msg");
         }
       } else {
@@ -435,8 +442,8 @@ export class Client {
     tss.threshold_signer_free(this._signer);
 
     // remove references
-    delete globalThis.tss_clients[this.session];
-    this.sockets.map((soc) => {
+    globalThis.tss_clients.delete(this.session);
+    this.sockets.forEach((soc) => {
       if (soc && soc.connected) {
         soc.close();
       }

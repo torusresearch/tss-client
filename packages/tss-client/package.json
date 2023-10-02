@@ -7,13 +7,13 @@
   ],
   "main": "dist/tssClient.cjs.js",
   "unpkg": "dist/tssClient.umd.min.js",
-  "browser": "dist/tssClient.umd.min.js",
+  "jsdelivr": "dist/tssClient.umd.min.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "depcheck": "depcheck .",
     "dev": "torus-scripts start",
-    "build": "torus-scripts build && tsc --emitDeclarationOnly",
+    "build": "torus-scripts build",
     "prepack": "npm run build"
   },
   "author": "Web3Auth",
@@ -23,13 +23,13 @@
     "@toruslabs/tss-lib": "^1.7.1",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
-    "keccak256": "^1.0.6",
+    "ethereum-cryptography": "^2.1.2",
     "socket.io-client": "^4.7.2"
   },
   "devDependencies": {
+    "rollup-plugin-web-worker-loader": "^1.6.1",
     "@types/bn.js": "^5.1.2",
     "@types/elliptic": "^6.4.15",
-    "cross-env": "^7.0.3",
     "rimraf": "^5.0.5",
     "workerize-loader": "^2.0.2"
   },
