@@ -10,6 +10,8 @@
   ],
   "main": "dist/tssLib.cjs.js",
   "module": "dist/tssLib.esm.js",
+  "unpkg": "dist/tssLib.umd.min.js",
+  "jsdelivr": "dist/tssLib.umd.min.js",
   "types": "dkls.d.ts",
   "scripts": {
     "depcheck": "depcheck .",
