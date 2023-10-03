@@ -1,15 +1,15 @@
-import { DB } from "./types";
+import { DB } from "./interfaces";
 
 class WebDb implements DB {
   get = (key: string): Promise<string> => {
-    return new Promise((r) => {
-      if (global?.localStorage) {
+    return new Promise((resolve) => {
+      if (globalThis?.localStorage) {
         // r(memoryDB[key])
-        const value = global.localStorage.getItem(key);
-        r(value);
+        const value = globalThis.localStorage.getItem(key);
+        resolve(value);
       } else {
         chrome.storage.local.get(key, (result) => {
-          r(result[key] as string);
+          resolve(result[key] as string);
           return result;
         });
       }
@@ -17,14 +17,14 @@ class WebDb implements DB {
   };
 
   set = (key: string, value: string): Promise<void> => {
-    return new Promise((r) => {
-      if (global?.localStorage) {
-        global.localStorage.setItem(key, value);
+    return new Promise((resolve) => {
+      if (globalThis?.localStorage) {
+        globalThis.localStorage.setItem(key, value);
         // memoryDB[key] = value
-        r();
+        resolve();
       } else {
         chrome.storage.local.set({ [key]: value }, () => {
-          r();
+          resolve();
         });
       }
     });

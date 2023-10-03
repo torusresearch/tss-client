@@ -3,7 +3,7 @@
 // eslint-disable-next-line
 import createWorker from "workerize-loader?inline!./worker.js";
 
-import { TssWorker } from "../types";
+import { TssWorker } from "../interfaces";
 
 class TssWebWorker implements TssWorker {
   constructor(private _wasmUrl: string) {}
@@ -16,6 +16,7 @@ class TssWebWorker implements TssWorker {
       worker.terminate();
       return mes as T;
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error(e);
     }
   }

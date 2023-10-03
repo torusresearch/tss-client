@@ -1,29 +1,25 @@
-
 # TSS-Client-SDk
+
 Client Side SDK for tss signature verification.
 
 ### Installation and setup
+
 <br />
 1. Installing node_modules
 
 ```
-yarn
+npm
 ```
 
 <br />
-2. Bootstrap
+2. Running the packages
 
 ```
-yarn bootstrap
-```
-<br />
-3. Running the packages
-
-```
-yarn run dev
+npm run dev
 ```
 
 ### Development
+
 <br />
 1. Setup any of the demo apps from `demo` folders.
 
@@ -43,16 +39,20 @@ NOTE: If you are using a local wasm file URL, Please copy the client wasm file f
 ### Updating DKLS19
 
 #### Step 1
+
 Build [DLKS19](https://github.com/torusresearch/dkls) with
+
 ```
 cd dkls
 wasm-pack build --release --target web
 ```
 
 #### Step 2
+
 From the `pkg` subfolder in `dkls`:
 
 Copy the following files:
+
 ```
 dkls.d.ts
 dkls_bg.wasm.d.ts
@@ -67,6 +67,7 @@ Copy contents of `dkls.js` into `packages/tss-lib/browser.js`.
 #### Step 4
 
 Revert any changes to the following functions and exports in `browser.js`:
+
 ```
 function initSync(module)
 async function init(input)

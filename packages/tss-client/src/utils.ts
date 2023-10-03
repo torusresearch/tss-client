@@ -2,7 +2,7 @@ import BN from "bn.js";
 import { curve, ec as EC } from "elliptic";
 import { io, Socket } from "socket.io-client";
 
-import { PointHex } from "./types";
+import { PointHex } from "./interfaces";
 
 export function getEc(): EC {
   return new EC("secp256k1");
