@@ -142,6 +142,8 @@ export class Client {
 
   private _readyResolves: ((value: unknown) => void)[] = [];
 
+  private _readyRejects: ((value: unknown) => void)[] = [];
+
   private _readyPromises: Promise<unknown>[] = [];
 
   private _readyPromiseAll: Promise<unknown>;
@@ -187,12 +189,15 @@ export class Client {
     _sockets.map((socket) => {
       if (socket === undefined || socket === null) {
         let clientResolve;
+        let clientReject;
         this._readyPromises.push(
-          new Promise((r) => {
+          new Promise((r, rj) => {
             clientResolve = r;
+            clientReject = rj;
           })
         );
         this._readyResolves.push(clientResolve);
+        this._readyRejects.push(clientReject);
         return;
       }
       if (socket.hasListeners("send")) {
@@ -201,12 +206,15 @@ export class Client {
 
       // create pending promises for each server that resolves when precompute for that server is complete
       let resolve: (value: unknown) => void;
+      let reject: (value: unknown) => void;
       this._readyPromises.push(
-        new Promise((r) => {
+        new Promise((r, rj) => {
           resolve = r;
+          reject = rj;
         })
       );
       this._readyResolves.push(resolve);
+      this._readyRejects.push(reject);
 
       // Add listener for incoming messages
       socket.on("send", async (data, cb) => {
@@ -294,7 +302,19 @@ export class Client {
             sendWebsocket: this.sockets[party].id,
             ...additionalParams,
           }),
-        });
+        })
+          .then(async (resp) => {
+            const json = await resp.json();
+            if (resp.status !== 200) {
+              throw new Error(
+                `precompute failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
+              );
+            }
+            return resp;
+          })
+          .catch((err) => {
+            this._readyRejects[this.parties.indexOf(i)](err);
+          });
 
         // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
         //   endpoints: this.endpoints.map((endpoint, j) => {
