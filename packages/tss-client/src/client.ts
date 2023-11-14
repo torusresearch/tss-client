@@ -250,6 +250,18 @@ export class Client {
         this.precomputes[this.parties.indexOf(party)] = "precompute_complete";
         resolve(null);
       });
+
+      // Add listener for failing
+      socket.on("precompute_failed", async (data, cb) => {
+        const { session, party } = data;
+        if (session !== this.session) {
+          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          return;
+        }
+        if (cb) cb();
+        this.precomputes[this.parties.indexOf(party)] = "precompute_failed";
+        reject("precompute_failed");
+      });
     });
 
     this._readyPromiseAll = Promise.all(this._readyPromises).then(() => {
