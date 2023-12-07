@@ -1,3 +1,5 @@
+import wasmData from "./wasm/client.wasm";
+
 let wasm;
 
 const heap = new Array(32).fill(undefined);
@@ -830,6 +832,7 @@ function initSync(module) {
 
 async function init(input) {
   if (typeof input === "undefined") {
+    input = wasmData;
     // input = new URL('dkls_bg.wasm', import.meta.url);
     throw new Error("no");
   }
