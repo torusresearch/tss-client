@@ -268,10 +268,10 @@ export class Client {
     await this._readyPromiseAll;
   }
 
-  precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
+  async precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
     this._startPrecomputeTime = Date.now();
-    this._signer = tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-    this._rng = tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
+    this._signer = await tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+    this._rng = await tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
     // check if sockets have connected and have an id;
     this.sockets.forEach((socket, party) => {
@@ -344,6 +344,7 @@ export class Client {
     tss
       .setup(this._signer, this._rng)
       .then(() => {
+        console.log("setup complete");
         return tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
       })
       .then((precompute) => {
@@ -427,14 +428,14 @@ export class Client {
           //   .then((res) => res.data.sig)
         );
       } else {
-        sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
+        sigFragmentsPromises.push(Promise.resolve(await tss.local_sign(msg, hash_only, precompute)));
       }
     }
 
     const sigFragments = await Promise.all(sigFragmentsPromises);
 
-    const R = tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
-    const sig = tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    const R = await tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
+    const sig = await tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
     let s = new BN(sigHex.slice(64), 16);
@@ -458,8 +459,8 @@ export class Client {
 
   async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
     // free rust objects
-    tss.random_generator_free(this._rng);
-    tss.threshold_signer_free(this._signer);
+    await tss.random_generator_free(this._rng);
+    await tss.threshold_signer_free(this._signer);
 
     // remove references
     globalThis.tss_clients.delete(this.session);
