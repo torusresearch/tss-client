@@ -456,8 +456,8 @@ export class Client {
 
   async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
     // free rust objects
-    if (this._rng) await tss.random_generator_free(this._rng);
-    if (this._signer) await tss.threshold_signer_free(this._signer);
+    if (this._rng !== undefined) await tss.random_generator_free(this._rng);
+    if (this._signer !== undefined) await tss.threshold_signer_free(this._signer);
 
     // remove references
     globalThis.tss_clients.delete(this.session);
