@@ -2,8 +2,8 @@
   "name": "@toruslabs/tss-lib",
   "version": "2.0.0",
   "files": [
-    "wasm",
     "browser.js",
+    "index.js",
     "dkls.d.ts",
     "dkls_bg.wasm.d.ts",
     "dist"
@@ -22,5 +22,8 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "a0acd762809f00707e6051ef300a5d6791e52bf8"
+  "gitHead": "a0acd762809f00707e6051ef300a5d6791e52bf8",
+  "devDependencies": {
+    "@rollup/plugin-wasm": "^6.2.2"
+  }
 }
