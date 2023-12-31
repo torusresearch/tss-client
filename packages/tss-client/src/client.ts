@@ -45,12 +45,12 @@ if (globalThis.js_read_msg === undefined) {
             clearInterval(timer);
             resolve(found.msg_data);
           }
-          if (counter >= 50) {
+          if (counter >= 500) {
             clearInterval(timer);
             reject(new Error("Message not received in a reasonable time"));
           }
           counter++;
-        }, 100);
+        }, 10);
       });
     }
     return mm.msg_data;
