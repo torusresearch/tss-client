@@ -7,14 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "bootstrap": "lerna bootstrap",
+    "bootstrap": "yarn bootstrap",
     "build": "lerna run build",
     "clean": "lerna clean --yes && lerna exec -- rimraf package-lock.json yarn.lock dist/ .rollup.cache/ tsconfig.build.tsbuildinfo .rts2_cache_{cjs,esm}/ *.tgz .eslintcache",
     "dev": "lerna run dev --parallel",
     "depcheck": "lerna run depcheck --parallel",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "pack:lerna": "lerna exec -- 'npm pack'",
-    "test": "node test.js",
     "publish:lerna": "yarn clean && yarn bootstrap && lerna publish",
     "just:publish:lerna": "lerna publish"
   },

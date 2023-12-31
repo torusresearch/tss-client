@@ -19,5 +19,8 @@
   "types": "dkls.d.ts",
   "sideEffects": [
     "./snippets/*"
-  ]
+  ],
+  "devDependencies": {
+    "@toruslabs/config": "^2.0.2"
+  }
 }
