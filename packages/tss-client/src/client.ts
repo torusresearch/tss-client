@@ -1,6 +1,16 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-import * as TssLib from "@toruslabs/tss-lib";
+import {
+  get_r_from_precompute,
+  local_sign,
+  local_verify,
+  precompute as dkls_precompute,
+  random_generator,
+  random_generator_free,
+  setup as dkls_setup,
+  threshold_signer,
+  threshold_signer_free,
+} from "@toruslabs/tss-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
@@ -8,7 +18,6 @@ import { Socket } from "socket.io-client";
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
-import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
@@ -21,8 +30,7 @@ if (globalThis.js_read_msg === undefined) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
-      // runs ga1_array processing on a web worker instead of blocking the main thread
-      return tss_client._workerSupported || "unsupported";
+      return "unsupported";
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -34,38 +42,10 @@ if (globalThis.js_read_msg === undefined) {
   };
 }
 
-globalThis.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
-  const worker = new TssWebWorker(tssImportUrl);
-  const res = worker.work<string>("process_ga1", [msg_data]);
-  return res;
-};
-
 if (globalThis.js_send_msg === undefined) {
   globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`sending msg, ${msg_type}`);
-    if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      globalThis
-        .process_ga1(tss_client.tssImportUrl, msg_data)
-        .then((processed_data: string) => {
-          const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
-          const pendingRead = tss_client.pendingReads.get(key);
-          if (pendingRead !== undefined) {
-            pendingRead(processed_data);
-          } else {
-            tss_client.msgQueue.push({
-              session,
-              sender: party,
-              recipient: self_index,
-              msg_type: `${session}~ga1_data_processed`,
-              msg_data: processed_data,
-            });
-          }
-          return true;
-        })
-        .catch((err) => console.error(err));
-      return true;
-    }
     if (tss_client.websocketOnly) {
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
@@ -124,8 +104,6 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssImportUrl: string;
-
   public _startPrecomputeTime: number;
 
   public _endPrecomputeTime: number;
@@ -165,8 +143,7 @@ export class Client {
     _sockets: (Socket | null | undefined)[],
     _share: string,
     _pubKey: string,
-    _websocketOnly: boolean,
-    _tssImportUrl: string
+    _websocketOnly: boolean
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, fill with nulls if necessary");
@@ -183,11 +160,9 @@ export class Client {
     this.share = _share;
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
-    this.tssImportUrl = _tssImportUrl;
     this.log = console.log;
     this._ready = false;
     this._consumed = false;
-    this._workerSupported = "unsupported";
     this._sLessThanHalf = true;
 
     _sockets.forEach((socket) => {
@@ -268,7 +243,7 @@ export class Client {
     await this._readyPromiseAll;
   }
 
-  precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
+  precompute(additionalParams?: Record<string, unknown>) {
     // check if sockets have connected and have an id;
     this.sockets.forEach((socket, party) => {
       if (socket !== null) {
@@ -317,34 +292,16 @@ export class Client {
           .catch((err) => {
             this._readyRejects[this.parties.indexOf(i)](err);
           });
-
-        // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-        //   endpoints: this.endpoints.map((endpoint, j) => {
-        //     if (j !== this.index) {
-        //       return endpoint;
-        //     }
-        //     // pass in different id for websocket connection for each server so that the server can communicate back
-        //     return `websocket:${this.sockets[party].id}`;
-        //   }),
-        //   session: this.session,
-        //   parties: this.parties,
-        //   player_index: party,
-        //   threshold: this.parties.length,
-        //   pubkey: this.pubKey,
-        //   notifyWebsocketId: this.sockets[party].id,
-        //   sendWebsocket: this.sockets[party].id,
-        //   ...additionalParams,
-        // });
       }
     }
 
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
-      this._signer = await tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-      this._rng = await tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
+      this._signer = await threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+      this._rng = await random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
-      await tss.setup(this._signer, this._rng);
-      const precomputeResult = await tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
+      await dkls_setup(this._signer, this._rng);
+      const precomputeResult = await dkls_precompute(new Uint8Array(this.parties), this._signer, this._rng);
       this.precomputes[this.parties.indexOf(this.index)] = precomputeResult;
       this._readyResolves[this.parties.indexOf(this.index)](null);
     };
@@ -353,7 +310,6 @@ export class Client {
   }
 
   async sign(
-    tss: typeof TssLib,
     msg: string,
     hash_only: boolean,
     original_message: string,
@@ -410,29 +366,16 @@ export class Client {
           })
             .then((res) => res.json())
             .then((res) => res.sig)
-
-          // axios
-          //   .post(`${endpoint}/sign`, {
-          //     session: this.session,
-          //     sender: this.index,
-          //     recipient: party,
-          //     msg,
-          //     hash_only,
-          //     original_message,
-          //     hash_algo,
-          //     ...additionalParams,
-          //   })
-          //   .then((res) => res.data.sig)
         );
       } else {
-        sigFragmentsPromises.push(Promise.resolve(await tss.local_sign(msg, hash_only, precompute)));
+        sigFragmentsPromises.push(Promise.resolve(await local_sign(msg, hash_only, precompute)));
       }
     }
 
     const sigFragments = await Promise.all(sigFragmentsPromises);
 
-    const R = await tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
-    const sig = await tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    const R = await get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
+    const sig = await local_verify(msg, hash_only, R, sigFragments, this.pubKey);
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
     let s = new BN(sigHex.slice(64), 16);
@@ -454,10 +397,10 @@ export class Client {
     return this.endpoints[party];
   }
 
-  async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
+  async cleanup(additionalParams?: Record<string, unknown>) {
     // free rust objects
-    if (this._rng !== undefined) await tss.random_generator_free(this._rng);
-    if (this._signer !== undefined) await tss.threshold_signer_free(this._signer);
+    if (this._rng !== undefined) await random_generator_free(this._rng);
+    if (this._signer !== undefined) await threshold_signer_free(this._signer);
 
     // remove references
     globalThis.tss_clients.delete(this.session);
