@@ -179,40 +179,42 @@ export class Client {
     this._sLessThanHalf = true;
 
     _sockets.forEach((socket) => {
-      if (socket.hasListeners("send")) {
-        socket.off("send");
+      if (socket !== null) {
+        if (socket.hasListeners("send")) {
+          socket.off("send");
+        }
+
+        // Add listener for incoming messages
+        socket.on("send", async (data, cb) => {
+          const { session, sender, recipient, msg_type, msg_data } = data;
+          if (session !== this.session) {
+            this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+            return;
+          }
+          this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
+          if (cb) cb();
+        });
+        // Add listener for completion
+        socket.on("precompute_complete", async (data, cb) => {
+          const { session, party } = data;
+          if (session !== this.session) {
+            this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+            return;
+          }
+          if (cb) cb();
+          this._precomputeComplete.push({ session, party });
+        });
+
+        socket.on("precompute_failed", async (data, cb) => {
+          const { session, party } = data;
+          if (session !== this.session) {
+            this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+            return;
+          }
+          if (cb) cb();
+          this._precomputeFailed.push({ session, party });
+        });
       }
-
-      // Add listener for incoming messages
-      socket.on("send", async (data, cb) => {
-        const { session, sender, recipient, msg_type, msg_data } = data;
-        if (session !== this.session) {
-          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
-          return;
-        }
-        this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
-        if (cb) cb();
-      });
-      // Add listener for completion
-      socket.on("precompute_complete", async (data, cb) => {
-        const { session, party } = data;
-        if (session !== this.session) {
-          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
-          return;
-        }
-        if (cb) cb();
-        this._precomputeComplete.push({ session, party });
-      });
-
-      socket.on("precompute_failed", async (data, cb) => {
-        const { session, party } = data;
-        if (session !== this.session) {
-          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
-          return;
-        }
-        if (cb) cb();
-        this._precomputeFailed.push({ session, party });
-      });
     });
     globalThis.tss_clients.set(this.session, this);
   }
