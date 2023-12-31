@@ -2,8 +2,8 @@
 import { generatePrivate } from "@toruslabs/eccrypto";
 import {
   get_r_from_precompute,
-  local_sign,
-  local_verify,
+  local_sign as generate_client_signature_fragment,
+  local_verify as create_signature,
   precompute as dkls_precompute,
   random_generator,
   random_generator_free,
@@ -22,6 +22,7 @@ import { getEc } from "./utils";
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
   // Cleanup leads to memory leaks with just an object. Should use a map instead.
+  // TODO: This should be singular.
   globalThis.tss_clients = new Map();
 }
 
@@ -34,8 +35,22 @@ if (globalThis.js_read_msg === undefined) {
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
-      return new Promise((resolve: (value: string | PromiseLike<string>) => void) => {
-        tss_client.pendingReads.set(`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`, resolve);
+      // It is very important that this promise can reject, since it is passed through to dkls library and awaited internally. If it cannot reject and a message is lost,
+      // it will never resolve and hang indefinitely with no possibility of recovery.
+      return new Promise((resolve, reject) => {
+        let counter = 0;
+        const timer = setInterval(() => {
+          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
+          if (found !== undefined) {
+            clearInterval(timer);
+            resolve(found.msg_data);
+          }
+          if (counter >= 50) {
+            clearInterval(timer);
+            reject(new Error("Message not received in a reasonable time"));
+          }
+          counter++;
+        }, 100);
       });
     }
     return mm.msg_data;
@@ -81,6 +96,11 @@ type Log = {
   (msg: string): void;
 };
 
+interface PrecomputeResult {
+  session: string;
+  party: number;
+}
+
 export class Client {
   public session: string;
 
@@ -90,8 +110,6 @@ export class Client {
 
   public msgQueue: Msg[] = [];
 
-  public pendingReads: Map<string, (value: string | PromiseLike<string>) => void | string> = new Map();
-
   public sockets: Socket[];
 
   public endpoints: string[];
@@ -99,8 +117,6 @@ export class Client {
   public share: string;
 
   public pubKey: string;
-
-  public precomputes: string[] = [];
 
   public websocketOnly: boolean;
 
@@ -122,17 +138,15 @@ export class Client {
 
   public _sLessThanHalf: boolean;
 
-  private _readyResolves: ((value: unknown) => void)[] = [];
+  private _precomputeComplete: PrecomputeResult[] = [];
 
-  private _readyRejects: ((value: unknown) => void)[] = [];
-
-  private _readyPromises: Promise<unknown>[] = [];
-
-  private _readyPromiseAll: Promise<unknown>;
+  private _precomputeFailed: PrecomputeResult[] = [];
 
   private _signer: number;
 
   private _rng: number;
+
+  private precomputed_value: string = null;
 
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
@@ -146,10 +160,10 @@ export class Client {
     _websocketOnly: boolean
   ) {
     if (_parties.length !== _sockets.length) {
-      throw new Error("parties and sockets length must be equal, fill with nulls if necessary");
+      throw new Error("parties and sockets length must be equal, add null for client if necessary");
     }
     if (_parties.length !== _endpoints.length) {
-      throw new Error("parties and endpoints length must be equal, fill with nulls if necessary");
+      throw new Error("parties and endpoints length must be equal, add null for client if necessary");
     }
 
     this.session = _session;
@@ -161,41 +175,13 @@ export class Client {
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
     this.log = console.log;
-    this._ready = false;
     this._consumed = false;
     this._sLessThanHalf = true;
 
     _sockets.forEach((socket) => {
-      if (socket === undefined || socket === null) {
-        let clientResolve;
-        let clientReject;
-        this._readyPromises.push(
-          // eslint-disable-next-line promise/param-names
-          new Promise((r, rj) => {
-            clientResolve = r;
-            clientReject = rj;
-          })
-        );
-        this._readyResolves.push(clientResolve);
-        this._readyRejects.push(clientReject);
-        return;
-      }
       if (socket.hasListeners("send")) {
         socket.off("send");
       }
-
-      // create pending promises for each server that resolves when precompute for that server is complete
-      let resolve: (value: unknown) => void;
-      let reject: (value: unknown) => void;
-      this._readyPromises.push(
-        // eslint-disable-next-line promise/param-names
-        new Promise((r, rj) => {
-          resolve = r;
-          reject = rj;
-        })
-      );
-      this._readyResolves.push(resolve);
-      this._readyRejects.push(reject);
 
       // Add listener for incoming messages
       socket.on("send", async (data, cb) => {
@@ -204,14 +190,7 @@ export class Client {
           this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
-        const pendingRead = this.pendingReads.get(`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`);
-        if (pendingRead !== undefined) {
-          // globalThis.total_incoming += msg_data.length;
-          // globalThis.total_incoming_msg.push(msg_data);
-          pendingRead(msg_data);
-        } else {
-          this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
-        }
+        this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
         if (cb) cb();
       });
       // Add listener for completion
@@ -222,15 +201,18 @@ export class Client {
           return;
         }
         if (cb) cb();
-        this.precomputes[this.parties.indexOf(party)] = "precompute_complete";
-        resolve(null);
+        this._precomputeComplete.push({ session, party });
       });
-    });
 
-    this._readyPromiseAll = Promise.all(this._readyPromises).then(() => {
-      this._ready = true;
-      this._endPrecomputeTime = Date.now();
-      return null;
+      socket.on("precompute_failed", async (data, cb) => {
+        const { session, party } = data;
+        if (session !== this.session) {
+          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          return;
+        }
+        if (cb) cb();
+        this._precomputeFailed.push({ session, party });
+      });
     });
     globalThis.tss_clients.set(this.session, this);
   }
@@ -239,11 +221,16 @@ export class Client {
     return this.session.split(DELIMITERS.Delimiter4)[1];
   }
 
-  async ready() {
-    await this._readyPromiseAll;
+  ready() {
+    // ensure that there were no failures and all peers are finished
+    if (this._precomputeFailed.length === 0 && this._precomputeComplete.length === this.parties.length - 1) {
+      return true;
+    }
+
+    return false;
   }
 
-  precompute(additionalParams?: Record<string, unknown>) {
+  async precompute(additionalParams?: Record<string, unknown>) {
     // check if sockets have connected and have an id;
     this.sockets.forEach((socket, party) => {
       if (socket !== null) {
@@ -253,60 +240,62 @@ export class Client {
       }
     });
 
+    const precomputePromises: Promise<boolean>[] = [];
+
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
       if (party !== this.index) {
-        fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            [WEB3_SESSION_HEADER_KEY]: this.sid,
-          },
-          body: JSON.stringify({
-            endpoints: this.endpoints.map((endpoint, j) => {
-              if (j !== this.index) {
-                return endpoint;
-              }
-              // pass in different id for websocket connection for each server so that the server can communicate back
-              return `websocket:${this.sockets[party].id}`;
-            }),
-            session: this.session,
-            parties: this.parties,
-            player_index: party,
-            threshold: this.parties.length,
-            pubkey: this.pubKey,
-            notifyWebsocketId: this.sockets[party].id,
-            sendWebsocket: this.sockets[party].id,
-            ...additionalParams,
-          }),
-        })
-          .then(async (resp) => {
-            const json = await resp.json();
-            if (resp.status !== 200) {
-              throw new Error(
-                `precompute failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
-              );
-            }
-            return resp;
+        precomputePromises.push(
+          new Promise((resolve, reject) => {
+            fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [WEB3_SESSION_HEADER_KEY]: this.sid,
+              },
+              body: JSON.stringify({
+                endpoints: this.endpoints.map((endpoint, j) => {
+                  if (j !== this.index) {
+                    return endpoint;
+                  }
+                  // pass in different id for websocket connection for each server so that the server can communicate back
+                  return `websocket:${this.sockets[party].id}`;
+                }),
+                session: this.session,
+                parties: this.parties,
+                player_index: party,
+                threshold: this.parties.length,
+                pubkey: this.pubKey,
+                notifyWebsocketId: this.sockets[party].id,
+                sendWebsocket: this.sockets[party].id,
+                ...additionalParams,
+              }),
+            })
+              .then(async (resp) => {
+                const json = await resp.json();
+                if (resp.status !== 200) {
+                  throw new Error(
+                    `precompute route failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
+                  );
+                }
+                return resp;
+              })
+              .catch((err) => {
+                reject(err);
+              });
+            resolve(true);
           })
-          .catch((err) => {
-            this._readyRejects[this.parties.indexOf(i)](err);
-          });
+        );
       }
     }
 
-    const setupPrecompute = async () => {
-      this._startPrecomputeTime = Date.now();
-      this._signer = await threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-      this._rng = await random_generator(Buffer.from(generatePrivate()).toString("base64"));
-
-      await dkls_setup(this._signer, this._rng);
-      const precomputeResult = await dkls_precompute(new Uint8Array(this.parties), this._signer, this._rng);
-      this.precomputes[this.parties.indexOf(this.index)] = precomputeResult;
-      this._readyResolves[this.parties.indexOf(this.index)](null);
-    };
-
-    setupPrecompute().catch(console.error);
+    this._startPrecomputeTime = Date.now();
+    await Promise.all(precomputePromises);
+    this._signer = threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+    this._rng = random_generator(Buffer.from(generatePrivate()).toString("base64"));
+    await dkls_setup(this._signer, this._rng);
+    this.precomputed_value = await dkls_precompute(new Uint8Array(this.parties), this._signer, this._rng);
+    this._endPrecomputeTime = Date.now();
   }
 
   async sign(
@@ -319,13 +308,9 @@ export class Client {
     if (!this._ready) {
       throw new Error("client is not ready");
     }
+
     if (this._consumed) {
-      throw new Error("this instance has already signed a message and cannot be reused");
-    } else {
-      this._consumed = true;
-    }
-    if (this.precomputes.length !== this.parties.length) {
-      throw new Error("insufficient precomputes");
+      throw new Error("This instance has already signed a message and cannot be reused");
     }
 
     // check message hashing
@@ -340,42 +325,52 @@ export class Client {
     }
 
     this._startSignTime = Date.now();
-    const sigFragmentsPromises = [];
-    for (let i = 0; i < this.precomputes.length; i++) {
-      const precompute = this.precomputes[i];
+    const sigFragments: string[] = [];
+    const fragmentPromises: Promise<string>[] = [];
+
+    for (let i = 0; i < this.parties.length; i++) {
       const party = i;
-      if (precompute === "precompute_complete") {
-        const endpoint = this.lookupEndpoint(this.session, party);
-        sigFragmentsPromises.push(
-          fetch(`${endpoint}/sign`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              [WEB3_SESSION_HEADER_KEY]: this.sid,
-            },
-            body: JSON.stringify({
-              session: this.session,
-              sender: this.index,
-              recipient: party,
-              msg,
-              hash_only,
-              original_message,
-              hash_algo,
-              ...additionalParams,
-            }),
-          })
-            .then((res) => res.json())
-            .then((res) => res.sig)
-        );
+      if (party === this.index) {
+        // create signature fragment for this client
+        sigFragments.push(await generate_client_signature_fragment(msg, hash_only, this.precomputed_value));
       } else {
-        sigFragmentsPromises.push(Promise.resolve(await local_sign(msg, hash_only, precompute)));
+        // collect signature fragment from all peers
+        fragmentPromises.push(
+          new Promise((resolve, reject) => {
+            const endpoint = this.lookupEndpoint(this.session, party);
+            fetch(`${endpoint}/sign`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [WEB3_SESSION_HEADER_KEY]: this.sid,
+              },
+              body: JSON.stringify({
+                session: this.session,
+                sender: this.index,
+                recipient: party,
+                msg,
+                hash_only,
+                original_message,
+                hash_algo,
+                ...additionalParams,
+              }),
+            })
+              .then((res) => res.json())
+              .then((res) => resolve(res.sig))
+              .catch((err) => {
+                reject(err);
+              });
+          })
+        );
       }
     }
 
-    const sigFragments = await Promise.all(sigFragmentsPromises);
+    sigFragments.concat(await Promise.all(fragmentPromises));
 
-    const R = await get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
-    const sig = await local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    const R = await get_r_from_precompute(this.precomputed_value);
+    const sig = await create_signature(msg, hash_only, R, sigFragments, this.pubKey);
+    this._endSignTime = Date.now();
+
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
     let s = new BN(sigHex.slice(64), 16);
@@ -388,7 +383,7 @@ export class Client {
         recoveryParam = (recoveryParam + 1) % 2;
       }
     }
-    this._endSignTime = Date.now();
+    this._consumed = true;
     return { r, s, recoveryParam };
   }
 
@@ -398,21 +393,33 @@ export class Client {
   }
 
   async cleanup(additionalParams?: Record<string, unknown>) {
-    // free rust objects
-    if (this._rng !== undefined) await random_generator_free(this._rng);
-    if (this._signer !== undefined) await threshold_signer_free(this._signer);
-
     // remove references
     globalThis.tss_clients.delete(this.session);
+
+    // free native objects
+    random_generator_free(this._rng);
+    threshold_signer_free(this._signer);
+
+    // clear data for this client
+    this._precomputeComplete = [];
+    this._precomputeFailed = [];
+    this.precompute = null;
+    this._endPrecomputeTime = null;
+    this._startPrecomputeTime = null;
+    this._endSignTime = null;
+    this._startSignTime = null;
+
     this.sockets.forEach((soc) => {
       if (soc && soc.connected) {
         soc.close();
       }
     });
+
+    // notify peers
     await Promise.all(
-      this.parties.map((party) => {
+      this.parties.map(async (party) => {
         if (party !== this.index) {
-          return fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
+          await fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
