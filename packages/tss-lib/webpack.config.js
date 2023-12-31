@@ -1,3 +1,3 @@
 exports.baseConfig = {
-  entry: "./browser.js",
+  entry: "./dkls.js",
 };

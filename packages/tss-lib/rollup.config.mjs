@@ -1,3 +1,3 @@
 export default {
-  input: "./browser.js",
+  input: "./dkls.js",
 };

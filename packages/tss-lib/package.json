@@ -1,18 +1,11 @@
 {
   "name": "@toruslabs/tss-lib",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "files": [
-    "wasm",
-    "browser.js",
-    "dkls.d.ts",
-    "dkls_bg.wasm.d.ts",
-    "dist"
+    "dkls_bg.wasm",
+    "dkls.js",
+    "dkls.d.ts"
   ],
-  "main": "dist/tssLib.cjs.js",
-  "module": "dist/tssLib.esm.js",
-  "unpkg": "dist/tssLib.umd.min.js",
-  "jsdelivr": "dist/tssLib.umd.min.js",
-  "types": "dkls.d.ts",
   "scripts": {
     "depcheck": "depcheck .",
     "dev": "torus-scripts start",
@@ -22,5 +15,9 @@
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "a0acd762809f00707e6051ef300a5d6791e52bf8"
+  "module": "dkls.js",
+  "types": "dkls.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
 }

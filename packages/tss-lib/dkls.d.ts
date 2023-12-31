@@ -165,15 +165,15 @@ export interface InitOutput {
   readonly __wbgtest_console_info: (a: number) => void;
   readonly __wbgtest_console_warn: (a: number) => void;
   readonly __wbgtest_console_error: (a: number) => void;
-  readonly __wbindgen_malloc: (a: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
+  readonly __wbindgen_malloc: (a: number, b: number) => number;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
-  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h393860affdd597ff: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_free: (a: number, b: number) => void;
+  readonly _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__ha8f305556b5eadc4: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly wasm_bindgen__convert__closures__invoke3_mut__h1fa7dc56d2cd12f8: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly wasm_bindgen__convert__closures__invoke2_mut__h09aaa711cefcd1d9: (a: number, b: number, c: number, d: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke3_mut__h4c83c1925188ff20: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke2_mut__h61a25ac68d21c849: (a: number, b: number, c: number, d: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
@@ -195,4 +195,4 @@ export function initSync(module: SyncInitInput): InitOutput;
 *
 * @returns {Promise<InitOutput>}
 */
-export default function init (module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;
+export default function __wbg_init (module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;
