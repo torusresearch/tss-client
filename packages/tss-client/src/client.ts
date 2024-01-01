@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-import {
+import __wbg_init, {
   get_r_from_precompute,
   local_sign as generate_client_signature_fragment,
   local_verify as create_signature,
@@ -18,6 +18,8 @@ import { Socket } from "socket.io-client";
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
+
+__wbg_init();
 
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
@@ -96,11 +98,6 @@ type Log = {
   (msg: string): void;
 };
 
-interface PrecomputeResult {
-  session: string;
-  party: number;
-}
-
 export class Client {
   public session: string;
 
@@ -130,23 +127,23 @@ export class Client {
 
   public log: Log;
 
-  public _ready: boolean;
-
   public _consumed: boolean;
 
   public _workerSupported: string;
 
   public _sLessThanHalf: boolean;
 
-  private _precomputeComplete: PrecomputeResult[] = [];
+  private _precomputeComplete: number[] = [];
 
-  private _precomputeFailed: PrecomputeResult[] = [];
+  private _precomputeFailed: number[] = [];
 
   private _signer: number;
 
   private _rng: number;
 
   private precomputed_value: string = null;
+
+  private _ready: boolean = false;
 
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
@@ -201,8 +198,8 @@ export class Client {
             this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
             return;
           }
+          this._precomputeComplete.push(party);
           if (cb) cb();
-          this._precomputeComplete.push({ session, party });
         });
 
         socket.on("precompute_failed", async (data, cb) => {
@@ -212,7 +209,7 @@ export class Client {
             return;
           }
           if (cb) cb();
-          this._precomputeFailed.push({ session, party });
+          this._precomputeFailed.push(party);
         });
       }
     });
@@ -221,15 +218,6 @@ export class Client {
 
   get sid(): string {
     return this.session.split(DELIMITERS.Delimiter4)[1];
-  }
-
-  ready() {
-    // ensure that there were no failures and all peers are finished
-    if (this._precomputeFailed.length === 0 && this._precomputeComplete.length === this.parties.length - 1) {
-      return true;
-    }
-
-    return false;
   }
 
   async precompute(additionalParams?: Record<string, unknown>) {
@@ -307,12 +295,12 @@ export class Client {
     hash_algo: string,
     additionalParams?: Record<string, unknown>
   ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
-    if (!this._ready) {
-      throw new Error("client is not ready");
-    }
-
     if (this._consumed) {
       throw new Error("This instance has already signed a message and cannot be reused");
+    }
+
+    if (!this._ready) {
+      throw new Error("client is not ready");
     }
 
     // check message hashing
@@ -367,7 +355,10 @@ export class Client {
       }
     }
 
-    sigFragments.concat(await Promise.all(fragmentPromises));
+    const peerFragments = await Promise.all(fragmentPromises);
+    peerFragments.forEach((fragment) => {
+      sigFragments.push(fragment);
+    });
 
     const R = await get_r_from_precompute(this.precomputed_value);
     const sig = await create_signature(msg, hash_only, R, sigFragments, this.pubKey);
@@ -433,5 +424,27 @@ export class Client {
         return Promise.resolve(true);
       })
     );
+  }
+
+  async ready() {
+    // ensure that there were no failures and all peers are finished
+    await new Promise<void>((resolve, reject) => {
+      let counter = 0;
+      const timer = setInterval(() => {
+        if (
+          this._precomputeFailed.length === 0 &&
+          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length - 1
+        ) {
+          clearInterval(timer);
+          this._ready = true;
+          resolve();
+        }
+        if (counter >= 500) {
+          clearInterval(timer);
+          reject(new Error("Client is not ready"));
+        }
+        counter++;
+      }, 10);
+    });
   }
 }

@@ -31,7 +31,7 @@ cd demo/<folder-name>
 2. Run example app.
 
 ```
-npm i && npm start
+npm run serve:local
 ```
 
 NOTE: If you are using a local wasm file URL, Please copy the client wasm file from `packages/tss-lib/wasm/client.wasm` in your test app dist folder.
