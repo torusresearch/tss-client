@@ -438,6 +438,8 @@ export class Client {
           clearInterval(timer);
           this._ready = true;
           resolve();
+        } else if (this._precomputeFailed.length > 0) {
+          reject(new Error("Peer failure detected, please try again"));
         }
         if (counter >= 500) {
           clearInterval(timer);
