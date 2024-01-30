@@ -1,5 +1,7 @@
 import { DB } from "./interfaces";
 
+// TODO: This should be removed, the client should not require any local storage
+
 class WebDb implements DB {
   get = (key: string): Promise<string> => {
     return new Promise((resolve) => {
@@ -26,6 +28,19 @@ class WebDb implements DB {
         chrome.storage.local.set({ [key]: value }, () => {
           resolve();
         });
+      }
+    });
+  };
+
+  delete = (key: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (globalThis?.localStorage) {
+        // r(memoryDB[key])
+        globalThis.localStorage.removeItem(key);
+        resolve();
+      } else {
+        chrome.storage.local.remove(key);
+        resolve();
       }
     });
   };

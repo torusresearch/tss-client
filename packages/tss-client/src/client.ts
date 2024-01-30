@@ -13,6 +13,7 @@ import TssWebWorker from "./worker";
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
   // Cleanup leads to memory leaks with just an object. Should use a map instead.
+  // TODO: This should be singular
   globalThis.tss_clients = new Map();
 }
 
@@ -21,13 +22,30 @@ if (globalThis.js_read_msg === undefined) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
-      // runs ga1_array processing on a web worker instead of blocking the main thread
+      // runs ga1_array processing on a web worker. Message processing is non-blocking, it is also sequential.
+      // TODO: Remove this web worker.
+      // This means there is no parallel benifit here. Additionally, removing this also will allow the
+      // dkls library to be used from tss-lib instead of being downloaded a second time from the server.
       return tss_client._workerSupported || "unsupported";
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
-      return new Promise((resolve: (value: string | PromiseLike<string>) => void) => {
-        tss_client.pendingReads.set(`session-${session}:sender-${party}:recipient-${self_index}:msg_type-${msg_type}`, resolve);
+      // It is very important that this promise can reject, since it is passed through to dkls library and awaited internally. If it cannot reject and a message is lost,
+      // it will never resolve and hang indefinitely with no possibility of recovery.
+      return new Promise((resolve, reject) => {
+        let counter = 0;
+        const timer = setInterval(() => {
+          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
+          if (found !== undefined) {
+            clearInterval(timer);
+            resolve(found.msg_data);
+          }
+          if (counter >= 500) {
+            clearInterval(timer);
+            reject(new Error("Message not received in a reasonable time"));
+          }
+          counter++;
+        }, 10);
       });
     }
     return mm.msg_data;
@@ -48,24 +66,19 @@ if (globalThis.js_send_msg === undefined) {
       globalThis
         .process_ga1(tss_client.tssImportUrl, msg_data)
         .then((processed_data: string) => {
-          const key = `session-${session}:sender-${party}:recipient-${self_index}:msg_type-${session}~ga1_data_processed`;
-          const pendingRead = tss_client.pendingReads.get(key);
-          if (pendingRead !== undefined) {
-            pendingRead(processed_data);
-          } else {
-            tss_client.msgQueue.push({
-              session,
-              sender: party,
-              recipient: self_index,
-              msg_type: `${session}~ga1_data_processed`,
-              msg_data: processed_data,
-            });
-          }
+          tss_client.msgQueue.push({
+            session,
+            sender: party,
+            recipient: self_index,
+            msg_type: `${session}~ga1_data_processed`,
+            msg_data: processed_data,
+          });
           return true;
         })
         .catch((err) => console.error(err));
       return true;
     }
+
     if (tss_client.websocketOnly) {
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
@@ -110,8 +123,6 @@ export class Client {
 
   public msgQueue: Msg[] = [];
 
-  public pendingReads: Map<string, (value: string | PromiseLike<string>) => void | string> = new Map();
-
   public sockets: Socket[];
 
   public endpoints: string[];
@@ -119,8 +130,6 @@ export class Client {
   public share: string;
 
   public pubKey: string;
-
-  public precomputes: string[] = [];
 
   public websocketOnly: boolean;
 
@@ -136,21 +145,19 @@ export class Client {
 
   public log: Log;
 
-  public _ready: boolean;
-
   public _consumed: boolean;
 
   public _workerSupported: string;
 
   public _sLessThanHalf: boolean;
 
-  private _readyResolves: ((value: unknown) => void)[] = [];
+  private _precomputeComplete: number[] = [];
 
-  private _readyRejects: ((value: unknown) => void)[] = [];
+  private _precomputeFailed: number[] = [];
 
-  private _readyPromises: Promise<unknown>[] = [];
+  private precomputed_value: string = null;
 
-  private _readyPromiseAll: Promise<unknown>;
+  private _ready: boolean = false;
 
   private _signer: number;
 
@@ -169,10 +176,10 @@ export class Client {
     _tssImportUrl: string
   ) {
     if (_parties.length !== _sockets.length) {
-      throw new Error("parties and sockets length must be equal, fill with nulls if necessary");
+      throw new Error("parties and sockets length must be equal, add null for client if necessary");
     }
     if (_parties.length !== _endpoints.length) {
-      throw new Error("parties and endpoints length must be equal, fill with nulls if necessary");
+      throw new Error("parties and endpoints length must be equal, add null for client if necessary");
     }
 
     this.session = _session;
@@ -185,42 +192,14 @@ export class Client {
     this.websocketOnly = _websocketOnly;
     this.tssImportUrl = _tssImportUrl;
     this.log = console.log;
-    this._ready = false;
     this._consumed = false;
     this._workerSupported = "unsupported";
     this._sLessThanHalf = true;
 
     _sockets.forEach((socket) => {
-      if (socket === undefined || socket === null) {
-        let clientResolve;
-        let clientReject;
-        this._readyPromises.push(
-          // eslint-disable-next-line promise/param-names
-          new Promise((r, rj) => {
-            clientResolve = r;
-            clientReject = rj;
-          })
-        );
-        this._readyResolves.push(clientResolve);
-        this._readyRejects.push(clientReject);
-        return;
-      }
       if (socket.hasListeners("send")) {
         socket.off("send");
       }
-
-      // create pending promises for each server that resolves when precompute for that server is complete
-      let resolve: (value: unknown) => void;
-      let reject: (value: unknown) => void;
-      this._readyPromises.push(
-        // eslint-disable-next-line promise/param-names
-        new Promise((r, rj) => {
-          resolve = r;
-          reject = rj;
-        })
-      );
-      this._readyResolves.push(resolve);
-      this._readyRejects.push(reject);
 
       // Add listener for incoming messages
       socket.on("send", async (data, cb) => {
@@ -229,14 +208,7 @@ export class Client {
           this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
-        const pendingRead = this.pendingReads.get(`session-${session}:sender-${sender}:recipient-${recipient}:msg_type-${msg_type}`);
-        if (pendingRead !== undefined) {
-          // globalThis.total_incoming += msg_data.length;
-          // globalThis.total_incoming_msg.push(msg_data);
-          pendingRead(msg_data);
-        } else {
-          this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
-        }
+        this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
         if (cb) cb();
       });
       // Add listener for completion
@@ -246,17 +218,21 @@ export class Client {
           this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
           return;
         }
+        this._precomputeComplete.push(party);
         if (cb) cb();
-        this.precomputes[this.parties.indexOf(party)] = "precompute_complete";
-        resolve(null);
+      });
+
+      socket.on("precompute_failed", async (data, cb) => {
+        const { session, party } = data;
+        if (session !== this.session) {
+          this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
+          return;
+        }
+        if (cb) cb();
+        this._precomputeFailed.push(party);
       });
     });
 
-    this._readyPromiseAll = Promise.all(this._readyPromises).then(() => {
-      this._ready = true;
-      this._endPrecomputeTime = Date.now();
-      return null;
-    });
     globalThis.tss_clients.set(this.session, this);
   }
 
@@ -265,7 +241,27 @@ export class Client {
   }
 
   async ready() {
-    await this._readyPromiseAll;
+    // ensure that there were no failures and all peers are finished
+    await new Promise<void>((resolve, reject) => {
+      let counter = 0;
+      const timer = setInterval(() => {
+        if (
+          this._precomputeFailed.length === 0 &&
+          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length - 1
+        ) {
+          clearInterval(timer);
+          this._ready = true;
+          resolve();
+        } else if (this._precomputeFailed.length > 0) {
+          reject(new Error("Peer failure detected, please try again"));
+        }
+        if (counter >= 500) {
+          clearInterval(timer);
+          reject(new Error("Client is not ready"));
+        }
+        counter++;
+      }, 10);
+    });
   }
 
   precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
@@ -278,75 +274,67 @@ export class Client {
       }
     });
 
+    const precomputePromises: Promise<boolean>[] = [];
+
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
       if (party !== this.index) {
-        fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            [WEB3_SESSION_HEADER_KEY]: this.sid,
-          },
-          body: JSON.stringify({
-            endpoints: this.endpoints.map((endpoint, j) => {
-              if (j !== this.index) {
-                return endpoint;
-              }
-              // pass in different id for websocket connection for each server so that the server can communicate back
-              return `websocket:${this.sockets[party].id}`;
-            }),
-            session: this.session,
-            parties: this.parties,
-            player_index: party,
-            threshold: this.parties.length,
-            pubkey: this.pubKey,
-            notifyWebsocketId: this.sockets[party].id,
-            sendWebsocket: this.sockets[party].id,
-            ...additionalParams,
-          }),
-        })
-          .then(async (resp) => {
-            const json = await resp.json();
-            if (resp.status !== 200) {
-              throw new Error(
-                `precompute failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
-              );
-            }
-            return resp;
+        precomputePromises.push(
+          new Promise((resolve, reject) => {
+            fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [WEB3_SESSION_HEADER_KEY]: this.sid,
+              },
+              body: JSON.stringify({
+                endpoints: this.endpoints.map((endpoint, j) => {
+                  if (j !== this.index) {
+                    return endpoint;
+                  }
+                  // pass in different id for websocket connection for each server so that the server can communicate back
+                  return `websocket:${this.sockets[party].id}`;
+                }),
+                session: this.session,
+                parties: this.parties,
+                player_index: party,
+                threshold: this.parties.length,
+                pubkey: this.pubKey,
+                notifyWebsocketId: this.sockets[party].id,
+                sendWebsocket: this.sockets[party].id,
+                ...additionalParams,
+              }),
+            })
+              .then(async (resp) => {
+                const json = await resp.json();
+                if (resp.status !== 200) {
+                  throw new Error(
+                    `precompute route failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
+                  );
+                }
+                return resp;
+              })
+              .catch((err) => {
+                reject(err);
+              });
+            resolve(true);
           })
-          .catch((err) => {
-            this._readyRejects[this.parties.indexOf(i)](err);
-          });
-
-        // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-        //   endpoints: this.endpoints.map((endpoint, j) => {
-        //     if (j !== this.index) {
-        //       return endpoint;
-        //     }
-        //     // pass in different id for websocket connection for each server so that the server can communicate back
-        //     return `websocket:${this.sockets[party].id}`;
-        //   }),
-        //   session: this.session,
-        //   parties: this.parties,
-        //   player_index: party,
-        //   threshold: this.parties.length,
-        //   pubkey: this.pubKey,
-        //   notifyWebsocketId: this.sockets[party].id,
-        //   sendWebsocket: this.sockets[party].id,
-        //   ...additionalParams,
-        // });
+        );
       }
     }
 
+    // TODO: Refactor precompute to be async instead of using inline async here.
+
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
+      await Promise.all(precomputePromises);
       this._signer = await tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
       this._rng = await tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
       await tss.setup(this._signer, this._rng);
       const precomputeResult = await tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
-      this.precomputes[this.parties.indexOf(this.index)] = precomputeResult;
-      this._readyResolves[this.parties.indexOf(this.index)](null);
+      this.precomputed_value = precomputeResult;
+      this._endPrecomputeTime = Date.now();
     };
 
     setupPrecompute().catch(console.error);
@@ -360,16 +348,12 @@ export class Client {
     hash_algo: string,
     additionalParams?: Record<string, unknown>
   ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
+    if (this._consumed) {
+      throw new Error("This instance has already signed a message and cannot be reused");
+    }
+
     if (!this._ready) {
       throw new Error("client is not ready");
-    }
-    if (this._consumed) {
-      throw new Error("this instance has already signed a message and cannot be reused");
-    } else {
-      this._consumed = true;
-    }
-    if (this.precomputes.length !== this.parties.length) {
-      throw new Error("insufficient precomputes");
     }
 
     // check message hashing
@@ -384,55 +368,55 @@ export class Client {
     }
 
     this._startSignTime = Date.now();
-    const sigFragmentsPromises = [];
-    for (let i = 0; i < this.precomputes.length; i++) {
-      const precompute = this.precomputes[i];
-      const party = i;
-      if (precompute === "precompute_complete") {
-        const endpoint = this.lookupEndpoint(this.session, party);
-        sigFragmentsPromises.push(
-          fetch(`${endpoint}/sign`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              [WEB3_SESSION_HEADER_KEY]: this.sid,
-            },
-            body: JSON.stringify({
-              session: this.session,
-              sender: this.index,
-              recipient: party,
-              msg,
-              hash_only,
-              original_message,
-              hash_algo,
-              ...additionalParams,
-            }),
-          })
-            .then((res) => res.json())
-            .then((res) => res.sig)
+    const sigFragments: string[] = [];
+    const fragmentPromises: Promise<string>[] = [];
 
-          // axios
-          //   .post(`${endpoint}/sign`, {
-          //     session: this.session,
-          //     sender: this.index,
-          //     recipient: party,
-          //     msg,
-          //     hash_only,
-          //     original_message,
-          //     hash_algo,
-          //     ...additionalParams,
-          //   })
-          //   .then((res) => res.data.sig)
-        );
+    for (let i = 0; i < this.parties.length; i++) {
+      const party = i;
+      if (party === this.index) {
+        // create signature fragment for this client
+        sigFragments.push(await tss.local_sign(msg, hash_only, this.precomputed_value));
       } else {
-        sigFragmentsPromises.push(Promise.resolve(await tss.local_sign(msg, hash_only, precompute)));
+        // collect signature fragment from all peers
+        fragmentPromises.push(
+          new Promise((resolve, reject) => {
+            const endpoint = this.lookupEndpoint(this.session, party);
+            fetch(`${endpoint}/sign`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [WEB3_SESSION_HEADER_KEY]: this.sid,
+              },
+              body: JSON.stringify({
+                session: this.session,
+                sender: this.index,
+                recipient: party,
+                msg,
+                hash_only,
+                original_message,
+                hash_algo,
+                ...additionalParams,
+              }),
+            })
+              .then((res) => res.json())
+              .then((res) => resolve(res.sig))
+              .catch((err) => {
+                reject(err);
+              });
+          })
+        );
       }
     }
 
-    const sigFragments = await Promise.all(sigFragmentsPromises);
+    const peerFragments = await Promise.all(fragmentPromises);
+    peerFragments.forEach((fragment) => {
+      sigFragments.push(fragment);
+    });
 
-    const R = await tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
+    const R = await tss.get_r_from_precompute(this.precomputed_value);
     const sig = await tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    this._endSignTime = Date.now();
+
     const sigHex = Buffer.from(sig, "base64").toString("hex");
     const r = new BN(sigHex.slice(0, 64), 16);
     let s = new BN(sigHex.slice(64), 16);
@@ -445,7 +429,7 @@ export class Client {
         recoveryParam = (recoveryParam + 1) % 2;
       }
     }
-    this._endSignTime = Date.now();
+    this._consumed = true;
     return { r, s, recoveryParam };
   }
 
@@ -455,9 +439,18 @@ export class Client {
   }
 
   async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
-    // free rust objects
-    if (this._rng !== undefined) await tss.random_generator_free(this._rng);
-    if (this._signer !== undefined) await tss.threshold_signer_free(this._signer);
+    // free native objects
+    tss.random_generator_free(this._rng);
+    tss.threshold_signer_free(this._signer);
+
+    // clear data for this client
+    this._precomputeComplete = [];
+    this._precomputeFailed = [];
+    this.precompute = null;
+    this._endPrecomputeTime = null;
+    this._startPrecomputeTime = null;
+    this._endSignTime = null;
+    this._startSignTime = null;
 
     // remove references
     globalThis.tss_clients.delete(this.session);
@@ -466,10 +459,11 @@ export class Client {
         soc.close();
       }
     });
+
     await Promise.all(
-      this.parties.map((party) => {
+      this.parties.map(async (party) => {
         if (party !== this.index) {
-          return fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
+          await fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
