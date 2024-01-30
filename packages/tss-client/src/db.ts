@@ -1,6 +1,7 @@
 import { DB } from "./interfaces";
 
-// TODO: This should be removed, the client should not require any local storage
+// TODO: This should be removed, the client should not require any local storage.
+// Client should only operate on data supplied to it.
 
 class WebDb implements DB {
   get = (key: string): Promise<string> => {

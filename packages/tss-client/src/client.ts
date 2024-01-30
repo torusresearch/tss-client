@@ -1,5 +1,8 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
+// TODO: Underlying library needs to use wasm file supplied with it instead of
+// downloading the wasm from the server, it is not necessary to re-download it.
+// Also see related comment on ga1 processing.
 import * as TssLib from "@toruslabs/tss-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
