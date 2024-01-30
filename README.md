@@ -10,7 +10,7 @@ npm install
 ```
 <br />
 
-### Running example
+### Running local test
 
 <br />
 ```
