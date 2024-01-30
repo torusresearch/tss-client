@@ -105,7 +105,6 @@ export const getSignatures = () => {
           .post(`${endpoints[i]}/share`, {
             session,
             share: Buffer.from(share.toString(16, 64), "hex").toString("base64"),
-            player_index: i,
           })
           .then((res) => res.data)
       );

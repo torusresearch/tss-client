@@ -232,8 +232,8 @@ export class Client {
             this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
             return;
           }
-          if (cb) cb();
           this._precomputeFailed.push(party);
+          if (cb) cb();
         });
       }
     });
