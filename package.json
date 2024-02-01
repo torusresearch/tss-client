@@ -14,9 +14,9 @@
     "depcheck": "lerna run depcheck --parallel",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "pack:lerna": "lerna exec -- 'npm pack'",
-    "test": "node test.js",
     "publish:lerna": "yarn clean && yarn bootstrap && lerna publish",
-    "just:publish:lerna": "lerna publish"
+    "just:publish:lerna": "lerna publish",
+    "serve:local":"cd packages/tss-web-example && webpack serve"
   },
   "keywords": [],
   "author": "Web3Auth",

@@ -5,36 +5,20 @@ Client Side SDK for tss signature verification.
 ### Installation and setup
 
 <br />
-1. Installing node_modules
+```
+npm install
+```
+<br />
 
-```
-npm
-```
+### Running local test
 
 <br />
-2. Running the packages
-
 ```
-npm run dev
+npm run clean
+npm run build
+npm run serve:local
 ```
-
-### Development
-
 <br />
-1. Setup any of the demo apps from `demo` folders.
-
-```
-cd demo/<folder-name>
-```
-
-<br />
-2. Run example app.
-
-```
-npm i && npm start
-```
-
-NOTE: If you are using a local wasm file URL, Please copy the client wasm file from `packages/tss-lib/wasm/client.wasm` in your test app dist folder.
 
 ### Updating DKLS19
 
