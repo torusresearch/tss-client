@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-client",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
     "dist"
@@ -20,7 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@toruslabs/eccrypto": "^4.0.0",
-    "@toruslabs/tss-lib": "^2.0.0",
+    "@toruslabs/tss-lib": "^2.3.0",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
     "ethereum-cryptography": "^2.1.3",
