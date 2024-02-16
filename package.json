@@ -7,14 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "bootstrap": "lerna bootstrap",
     "build": "lerna run build",
     "clean": "lerna clean --yes && lerna exec -- rimraf package-lock.json yarn.lock dist/ .rollup.cache/ tsconfig.build.tsbuildinfo .rts2_cache_{cjs,esm}/ *.tgz .eslintcache",
     "dev": "lerna run dev --parallel",
     "depcheck": "lerna run depcheck --parallel",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "pack:lerna": "lerna exec -- 'npm pack'",
-    "publish:lerna": "yarn clean && yarn bootstrap && lerna publish",
+    "publish:lerna": "yarn clean && yarn && lerna publish",
     "just:publish:lerna": "lerna publish",
     "serve:local":"cd packages/tss-web-example && webpack serve"
   },
