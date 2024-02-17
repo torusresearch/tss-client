@@ -252,7 +252,8 @@ export class Client {
       const timer = setInterval(() => {
         if (
           this._precomputeFailed.length === 0 &&
-          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length - 1
+          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length &&
+          this.precomputed_value != null
         ) {
           clearInterval(timer);
           this._ready = true;
@@ -339,10 +340,15 @@ export class Client {
       await tss.setup(this._signer, this._rng);
       const precomputeResult = await tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
       this.precomputed_value = precomputeResult;
+      this._precomputeComplete.push(this.index);
+      this._consumed = false;
       this._endPrecomputeTime = Date.now();
     };
 
-    setupPrecompute().catch(console.error);
+    setupPrecompute().catch((e) => {
+      this._precomputeFailed.push(this.index);
+      console.error(e);
+    });
   }
 
   async sign(
@@ -353,11 +359,11 @@ export class Client {
     hash_algo: string,
     additionalParams?: Record<string, unknown>
   ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
-    if (this._consumed) {
+    if (this._consumed === true) {
       throw new Error("This instance has already signed a message and cannot be reused");
     }
 
-    if (!this._ready) {
+    if (this._ready === false) {
       throw new Error("client is not ready");
     }
 
@@ -435,6 +441,7 @@ export class Client {
       }
     }
     this._consumed = true;
+    this._ready = false;
     return { r, s, recoveryParam };
   }
 
@@ -456,6 +463,8 @@ export class Client {
     this._startPrecomputeTime = null;
     this._endSignTime = null;
     this._startSignTime = null;
+    this._consumed = false;
+    this._ready = false;
 
     // remove references
     globalThis.tss_clients.delete(this.session);

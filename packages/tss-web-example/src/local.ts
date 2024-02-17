@@ -127,7 +127,7 @@ const runTest = async () => {
   client.log = log;
   // initiate precompute
   console.log("starting precompute");
-  await client.precompute(tss, { signatures, server_coeffs: serverCoeffs });
+  client.precompute(tss, { signatures, server_coeffs: serverCoeffs });
   await client.ready();
   // initiate signature.
   
