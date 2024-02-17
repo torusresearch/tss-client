@@ -166,6 +166,9 @@ export class Client {
 
   private _rng: number;
 
+  // this is required due to precompute not being marked async
+  private _readyResolve: Promise<void>;
+
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
     _session: string,
@@ -246,6 +249,12 @@ export class Client {
   }
 
   async ready() {
+    if (this._readyResolve != null) {
+      await this._readyResolve;
+    } else {
+      throw new Error("Precompute needs to be called before ready");
+    }
+
     // ensure that there were no failures and all peers are finished
     await new Promise<void>((resolve, reject) => {
       let counter = 0;
@@ -330,7 +339,6 @@ export class Client {
     }
 
     // TODO: Refactor precompute to be async instead of using inline async here.
-
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
       await Promise.all(precomputePromises);
@@ -345,7 +353,7 @@ export class Client {
       this._endPrecomputeTime = Date.now();
     };
 
-    setupPrecompute().catch((e) => {
+    this._readyResolve = setupPrecompute().catch((e) => {
       this._precomputeFailed.push(this.index);
       console.error(e);
     });
@@ -442,6 +450,7 @@ export class Client {
     }
     this._consumed = true;
     this._ready = false;
+    this._readyResolve = null;
     return { r, s, recoveryParam };
   }
 
@@ -465,6 +474,7 @@ export class Client {
     this._startSignTime = null;
     this._consumed = false;
     this._ready = false;
+    this._readyResolve = null;
 
     // remove references
     globalThis.tss_clients.delete(this.session);
