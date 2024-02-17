@@ -167,7 +167,7 @@ export class Client {
   private _rng: number;
 
   // this is required due to precompute not being marked async
-  private _readyResolve: Promise<void>;
+  private _readyResolve: Promise<void> = null;
 
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
