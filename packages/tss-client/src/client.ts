@@ -458,7 +458,7 @@ export class Client {
     // clear data for this client
     this._precomputeComplete = [];
     this._precomputeFailed = [];
-    this.precompute = null;
+    this.precomputed_value = null;
     this._endPrecomputeTime = null;
     this._startPrecomputeTime = null;
     this._endSignTime = null;
