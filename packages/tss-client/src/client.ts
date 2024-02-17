@@ -27,7 +27,7 @@ if (globalThis.js_read_msg === undefined) {
     if (msg_type === "ga1_worker_support") {
       // runs ga1_array processing on a web worker. Message processing is non-blocking, it is also sequential.
       // TODO: Remove this web worker.
-      // This means there is no parallel benifit here. Additionally, removing this also will allow the
+      // There is no parallel benefit here. Additionally, removing this also will allow the
       // dkls library to be used from tss-lib instead of being downloaded a second time from the server.
       return tss_client._workerSupported || "unsupported";
     }
