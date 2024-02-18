@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@toruslabs/*": ["packages/*"]
+      "@toruslabs/*": ["packages/tss-*"]
     }
   }
 }

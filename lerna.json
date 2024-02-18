@@ -1,5 +1,8 @@
 {
   "$schema": "node_modules/lerna/schemas/lerna-schema.json",
   "npmClient": "npm",
-  "version": "2.3.1"
+  "version": "2.3.1",
+  "packages": [
+    "packages/tss-*"
+  ]
 }
