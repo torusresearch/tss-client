@@ -1,6 +1,6 @@
 {
   "name": "tss-web-test",
-  "version": "2.3.1",
+  "version": "2.3.0",
   "description": "Integration test for tss protocol",
   "main": "dist/test.bundle.js",
   "scripts": {
