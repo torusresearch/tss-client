@@ -27,7 +27,7 @@ if (globalThis.js_read_msg === undefined) {
     if (msg_type === "ga1_worker_support") {
       // runs ga1_array processing on a web worker. Message processing is non-blocking, it is also sequential.
       // TODO: Remove this web worker.
-      // This means there is no parallel benifit here. Additionally, removing this also will allow the
+      // There is no parallel benefit here. Additionally, removing this also will allow the
       // dkls library to be used from tss-lib instead of being downloaded a second time from the server.
       return tss_client._workerSupported || "unsupported";
     }
@@ -166,6 +166,9 @@ export class Client {
 
   private _rng: number;
 
+  // this is required due to precompute not being marked async
+  private _readyResolve: Promise<void> = null;
+
   // Note: create sockets externally before passing it in in the constructor to allow socket reuse
   constructor(
     _session: string,
@@ -246,13 +249,20 @@ export class Client {
   }
 
   async ready() {
+    if (this._readyResolve != null) {
+      await this._readyResolve;
+    } else {
+      throw new Error("Precompute needs to be called before ready");
+    }
+
     // ensure that there were no failures and all peers are finished
     await new Promise<void>((resolve, reject) => {
       let counter = 0;
       const timer = setInterval(() => {
         if (
           this._precomputeFailed.length === 0 &&
-          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length - 1
+          this._precomputeComplete.filter((x, i, a) => a.indexOf(x) === i).length === this.parties.length &&
+          this.precomputed_value != null
         ) {
           clearInterval(timer);
           this._ready = true;
@@ -329,7 +339,6 @@ export class Client {
     }
 
     // TODO: Refactor precompute to be async instead of using inline async here.
-
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
       await Promise.all(precomputePromises);
@@ -339,10 +348,15 @@ export class Client {
       await tss.setup(this._signer, this._rng);
       const precomputeResult = await tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
       this.precomputed_value = precomputeResult;
+      this._precomputeComplete.push(this.index);
+      this._consumed = false;
       this._endPrecomputeTime = Date.now();
     };
 
-    setupPrecompute().catch(console.error);
+    this._readyResolve = setupPrecompute().catch((e) => {
+      this._precomputeFailed.push(this.index);
+      console.error(e);
+    });
   }
 
   async sign(
@@ -353,11 +367,11 @@ export class Client {
     hash_algo: string,
     additionalParams?: Record<string, unknown>
   ): Promise<{ r: BN; s: BN; recoveryParam: number }> {
-    if (this._consumed) {
+    if (this._consumed === true) {
       throw new Error("This instance has already signed a message and cannot be reused");
     }
 
-    if (!this._ready) {
+    if (this._ready === false) {
       throw new Error("client is not ready");
     }
 
@@ -435,6 +449,8 @@ export class Client {
       }
     }
     this._consumed = true;
+    this._ready = false;
+    this._readyResolve = null;
     return { r, s, recoveryParam };
   }
 
@@ -451,11 +467,14 @@ export class Client {
     // clear data for this client
     this._precomputeComplete = [];
     this._precomputeFailed = [];
-    this.precompute = null;
+    this.precomputed_value = null;
     this._endPrecomputeTime = null;
     this._startPrecomputeTime = null;
     this._endSignTime = null;
     this._startSignTime = null;
+    this._consumed = false;
+    this._ready = false;
+    this._readyResolve = null;
 
     // remove references
     globalThis.tss_clients.delete(this.session);
