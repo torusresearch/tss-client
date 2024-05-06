@@ -289,7 +289,7 @@ export class Client {
       }
     });
 
-    const precomputePromises: Promise<boolean>[] = [];
+    const precomputePromises: Promise<Response>[] = [];
 
     for (let i = 0; i < this.parties.length; i++) {
       const party = this.parties[i];
@@ -327,12 +327,11 @@ export class Client {
                     `precompute route failed on ${this.lookupEndpoint(this.session, party)} with status ${resp.status} \n ${JSON.stringify(json)} `
                   );
                 }
-                return resp;
+                return resolve(resp);
               })
               .catch((err) => {
                 reject(err);
               });
-            resolve(true);
           })
         );
       }
