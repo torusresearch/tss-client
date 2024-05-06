@@ -43,7 +43,7 @@ if (globalThis.js_read_msg === undefined) {
             clearInterval(timer);
             resolve(found.msg_data);
           }
-          if (counter >= 3000) {
+          if (counter >= 1000) {
             clearInterval(timer);
             // TODO Fix wasm to handle error objects properly and then reject
             // with Error instead of string.
