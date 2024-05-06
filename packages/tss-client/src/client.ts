@@ -43,9 +43,13 @@ if (globalThis.js_read_msg === undefined) {
             clearInterval(timer);
             resolve(found.msg_data);
           }
-          if (counter >= 500) {
+          if (counter >= 1000) {
             clearInterval(timer);
-            reject(new Error("Message not received in a reasonable time"));
+            // TODO Fix wasm to handle error objects properly and then reject
+            // with Error instead of string.
+            //
+            // eslint-disable-next-line prefer-promise-reject-errors
+            reject("Message not received in a reasonable time");
           }
           counter++;
         }, 10);
