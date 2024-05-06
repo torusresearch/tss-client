@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-client",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "Client SDK for MPECDSA signing",
   "files": [
     "dist"
