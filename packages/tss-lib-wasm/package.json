@@ -1,0 +1,22 @@
+{
+  "name": "@toruslabs/tss-lib-wasm",
+  "version": "0.1.0",
+  "description": "Packaged WASM file for the DKLS threshold signing client library.",
+  "main": "dist/tssLibWasm.cjs.js",
+  "unpkg": "dist/tssLibWasm.umd.min.js",
+  "jsdelivr": "dist/tssLibWasm.umd.min.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "watch": "torus-scripts start",
+    "build": "torus-scripts build",
+    "prepack": "npm run build",
+    "release": "torus-scripts release"
+  },
+  "devDependencies": {
+    "ts-loader": "^9.4.2"
+  }
+}

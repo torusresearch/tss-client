@@ -25,6 +25,7 @@
     "@toruslabs/torus.js": "6.2.0-alpha.1",
     "@toruslabs/tss-client": "^2.3.0",
     "@toruslabs/tss-lib": "^2.3.0",
+    "@toruslabs/tss-lib-wasm": "file:../tss-lib-wasm",
     "axios": "^1.6.0",
     "base64url": "^3.0.1",
     "bn.js": "^5.2.1",

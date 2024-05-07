@@ -3,3 +3,4 @@ dist
 webpack
 pkg/
 scripts/
+packages/tss-lib/

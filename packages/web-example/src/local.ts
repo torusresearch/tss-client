@@ -4,12 +4,12 @@ import eccrypto, { generatePrivate } from "eccrypto";
 import { privateToAddress } from "ethereumjs-util";
 import keccak256 from "keccak256";
 import * as tss from "@toruslabs/tss-lib";
+import clientWASM from "@toruslabs/tss-lib-wasm";
 
 import { getEcCrypto } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";
 
-// NOTE: Calls to this route should be evenly distributed across servers
-const tssImportUrl = `http://localhost:8000/clientWasm`;
+const tssImportUrl = clientWASM.wasm;
 
 const DELIMITERS = {
     Delimiter1: "\u001c",
