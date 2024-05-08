@@ -3,8 +3,7 @@ import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
 import { privateToAddress } from "ethereumjs-util";
 import keccak256 from "keccak256";
-// import * as tss from "@toruslabs/tss-lib";
-import * as tss from "@toruslabs/tss-lib-wasm";
+import * as tss from "@toruslabs/tss-lib";
 
 import { getEcCrypto } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";

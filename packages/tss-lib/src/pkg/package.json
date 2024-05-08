@@ -1,0 +1,14 @@
+{
+  "name": "dkls",
+  "version": "0.1.0",
+  "files": [
+    "dkls_bg.wasm",
+    "dkls.js",
+    "dkls.d.ts"
+  ],
+  "module": "dkls.js",
+  "types": "dkls.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -20,8 +20,6 @@
   "license": "ISC",
   "dependencies": {
     "@toruslabs/eccrypto": "^4.0.0",
-    "@toruslabs/tss-lib": "^2.3.0",
-    "@toruslabs/tss-lib-wasm": "file:../tss-lib-wasm",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
     "ethereum-cryptography": "^2.1.3",
