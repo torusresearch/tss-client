@@ -3,7 +3,7 @@ import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
 import { privateToAddress } from "ethereumjs-util";
 import keccak256 from "keccak256";
-import * as tss from "@toruslabs/tss-lib";
+import * as tssLib from "@toruslabs/tss-lib";
 
 import { getEcCrypto } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";
@@ -119,15 +119,15 @@ const runTest = async () => {
   }
 
   console.log(sockets);
-  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true);
+  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssLib);
   client.log = log;
   // initiate precompute
   console.log("starting precompute");
-  client.precompute(tss, { signatures, server_coeffs: serverCoeffs });
+  client.precompute({ signatures, server_coeffs: serverCoeffs });
   await client.ready();
   // initiate signature.
   
-  const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256", { signatures });
+  const signature = await client.sign(msgHash.toString("base64"), true, msg, "keccak256", { signatures });
 
   const hexToDecimal = (x: Buffer) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
@@ -141,7 +141,7 @@ const runTest = async () => {
   client.log(`passed: ${passed}`);
   client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
   client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-  await client.cleanup(tss, { signatures });
+  await client.cleanup({ signatures });
   client.log("client cleaned up");
 };
 
