@@ -3,13 +3,11 @@ import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
 import { privateToAddress } from "ethereumjs-util";
 import keccak256 from "keccak256";
-import * as tss from "@toruslabs/tss-lib";
-import clientWASM from "@toruslabs/tss-lib-wasm";
+// import * as tss from "@toruslabs/tss-lib";
+import * as tss from "@toruslabs/tss-lib-wasm";
 
 import { getEcCrypto } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";
-
-const tssImportUrl = clientWASM.wasm;
 
 const DELIMITERS = {
     Delimiter1: "\u001c",
@@ -111,7 +109,6 @@ const runTest = async () => {
   const [{ share, pubKey, privKey }, sockets] = await Promise.all([
     setupMockShares(endpoints, partyIndexes, session),
     setupSockets(tssWSEndpoints),
-    tss.default(tssImportUrl)
   ]);
 
   const serverCoeffs: Record<number,string> = {};
@@ -123,7 +120,7 @@ const runTest = async () => {
   }
 
   console.log(sockets);
-  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssImportUrl);
+  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true);
   client.log = log;
   // initiate precompute
   console.log("starting precompute");

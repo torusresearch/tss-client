@@ -1,14 +1,14 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-// TODO: Underlying library needs to use wasm file supplied with it instead of
-// downloading the wasm from the server, it is not necessary to re-download it.
-// Also see related comment on ga1 processing.
-import * as TssLib from "@toruslabs/tss-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
+// TODO: Underlying library needs to use wasm file supplied with it instead of
+// downloading the wasm from the server, it is not necessary to re-download it.
+// Also see related comment on ga1 processing.
+import type * as TssLib from "./dkls";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
 import TssWebWorker from "./worker";
@@ -70,20 +70,7 @@ if (globalThis.js_send_msg === undefined) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      globalThis
-        .process_ga1(tss_client.tssImportUrl, msg_data)
-        .then((processed_data: string) => {
-          tss_client.msgQueue.push({
-            session,
-            sender: party,
-            recipient: self_index,
-            msg_type: `${session}~ga1_data_processed`,
-            msg_data: processed_data,
-          });
-          return true;
-        })
-        .catch((err) => console.error(err));
-      return true;
+      throw new Error("ga1_data_unprocessed should not be sent directly");
     }
 
     if (tss_client.websocketOnly) {
@@ -140,7 +127,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssImportUrl: string;
+  public tssLib: typeof TssLib;
 
   public _startPrecomputeTime: number;
 
@@ -182,8 +169,7 @@ export class Client {
     _sockets: (Socket | null | undefined)[],
     _share: string,
     _pubKey: string,
-    _websocketOnly: boolean,
-    _tssImportUrl: string
+    _websocketOnly: boolean
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
@@ -200,7 +186,6 @@ export class Client {
     this.share = _share;
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
-    this.tssImportUrl = _tssImportUrl;
     this.log = console.log;
     this._consumed = false;
     this._workerSupported = "unsupported";
