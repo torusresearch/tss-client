@@ -5,7 +5,7 @@
   "main": "dist/tssLib.cjs.js",
   "unpkg": "dist/tssLib.umd.min.js",
   "jsdelivr": "dist/tssLib.umd.min.js",
-  "types": "dist/types/dkls.d.ts",
+  "types": "dist/types/index.d.ts",
   "files": [
     "dist"
   ],
