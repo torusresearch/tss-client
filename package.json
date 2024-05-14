@@ -15,7 +15,9 @@
     "pack:lerna": "lerna exec -- 'npm pack'",
     "publish:lerna": "yarn clean && yarn && yarn run build && lerna publish",
     "just:publish:lerna": "lerna publish",
-    "serve:local":"cd packages/tss-web-example && webpack serve"
+    "serve:example": "cd packages/web-example && npm run serve",
+    "serve:example:local": "cd packages/web-example && npm run serve:local",
+    "e2e": "node scripts/e2e.js"
   },
   "keywords": [],
   "author": "Web3Auth",
@@ -30,10 +32,14 @@
     "cross-env": "^7.0.3",
     "depcheck": "^1.4.6",
     "eslint": "^8.50.0",
+    "find-process": "^1.4.7",
     "lerna": "^7.3.0",
     "prettier": "^3.0.3",
     "rimraf": "^5.0.5",
-    "typescript": "^5.2.2"
+    "selenium-webdriver": "^4.16.0",
+    "typescript": "^5.2.2",
+    "vm-browserify": "^1.1.2",
+    "wait-on": "^7.2.0"
   },
   "dependencies": {
     "@types/chrome": "^0.0.246",

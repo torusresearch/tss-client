@@ -1,86 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import BN from "bn.js";
-import EC from "elliptic";
+import EC, { curve } from "elliptic";
 import { io, Socket } from "socket.io-client";
 import TorusUtils from "@toruslabs/torus.js";
-import rsa from "jsrsasign";
-
-const torusNodeEndpoints = [
-  "https://sapphire-dev-2-1.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-2.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-3.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-4.authnetwork.dev/sss/jrpc",
-  "https://sapphire-dev-2-5.authnetwork.dev/sss/jrpc",
-];
-
-const torus = new TorusUtils({
-  metadataHost: "https://sapphire-dev-2-1.authnetwork.dev/metadata",
-  network: "cyan",
-  enableOneKey: true,
-});
-
+import { KJUR } from "jsrsasign";
+import { TORUS_SAPPHIRE_NETWORK_TYPE } from "@toruslabs/constants";
+import { fetchLocalConfig } from "@toruslabs/fnd-base";
 
 export function getEcCrypto(): EC.ec {
   // eslint-disable-next-line new-cap
   return new EC.ec("secp256k1");
 }
 
+export interface HexPoint {
+  x: string,
+  y: string,
+}
 
-export function ecPoint(p: { x: string, y: string }): EC.curve.base.BasePoint {
+export function ecPoint(p: HexPoint): curve.base.BasePoint {
   const ec = getEcCrypto();
   return ec.keyFromPublic({ x: p.x.padStart(64, "0"), y: p.y.padStart(64, "0") }).getPublic();
 }
-
-export const getAdditiveCoeff = (isUser: boolean, participatingServerIndexes: number[], userTSSIndex: number, serverIndex?: number): BN => {
-  const ec = getEcCrypto();
-  if (isUser) {
-    return getLagrangeCoeffs([1, userTSSIndex], userTSSIndex);
-  }
-  // generate the lagrange coeff that converts the current server DKG share into an additive sharing
-  const serverLagrangeCoeff = getLagrangeCoeffs(participatingServerIndexes, serverIndex);
-  const masterLagrangeCoeff = getLagrangeCoeffs([1, userTSSIndex], 1);
-  const additiveLagrangeCoeff = serverLagrangeCoeff.mul(masterLagrangeCoeff).umod(ec.curve.n);
-  return additiveLagrangeCoeff;
-};
-
-// Note: this is only needed for DKLS and not for FROST
-export const getDenormaliseCoeff = (party: number, parties: number[]): BN => {
-  if (parties.indexOf(party) === -1) throw new Error(`party ${party} not found in parties ${parties}`);
-  const ec = getEcCrypto();
-  // generate the lagrange coeff that denormalises the additive sharing into the shamir sharing that TSS is expecting
-  const denormaliseLagrangeCoeff = getLagrangeCoeffs(parties, party).invm(ec.curve.n).umod(ec.curve.n);
-  return denormaliseLagrangeCoeff;
-};
-
-export const getDKLSCoeff = (isUser: boolean, participatingServerIndexes: number[], userTSSIndex: number, serverIndex?: number, ): BN => {
-  const sortedServerIndexes = participatingServerIndexes.sort((a, b) => a - b);
-  for (let i = 0; i < sortedServerIndexes.length; i++) {
-    if (sortedServerIndexes[i] !== participatingServerIndexes[i]) throw new Error("server indexes must be sorted");
-  }
-  // generate denormalise coeff for DKLS
-  const parties = [];
-
-  // total number of parties for DKLS = total number of servers + 1 (user is the last party)
-  // server party indexes
-  let serverPartyIndex = 0;
-  for (let i = 0; i < participatingServerIndexes.length; i++) {
-    const currentPartyIndex = i+1;
-    parties.push(currentPartyIndex);
-    if (participatingServerIndexes[i] === serverIndex) serverPartyIndex = currentPartyIndex;
-  }
-  const userPartyIndex = parties.length + 1;
-  parties.push(userPartyIndex); // user party index
-  if (isUser) {
-    const additiveCoeff = getAdditiveCoeff(isUser, participatingServerIndexes, userTSSIndex, serverIndex);
-    const denormaliseCoeff = getDenormaliseCoeff(userPartyIndex, parties);
-    const ec = getEcCrypto();
-    return denormaliseCoeff.mul(additiveCoeff).umod(ec.curve.n);
-  }
-  const additiveCoeff = getAdditiveCoeff(isUser, participatingServerIndexes, userTSSIndex, serverIndex);
-  const denormaliseCoeff = getDenormaliseCoeff(serverPartyIndex, parties);
-  const ec = getEcCrypto();
-  const coeff = denormaliseCoeff.mul(additiveCoeff).umod(ec.curve.n);
-  return coeff;
-};
 
 export function getLagrangeCoeffs(_allIndexes: number[] | BN[], _myIndex: number | BN, _target: number | BN = 0): BN {
   const ec = getEcCrypto();
@@ -103,16 +43,6 @@ export function getLagrangeCoeffs(_allIndexes: number[] | BN[], _myIndex: number
   return upper.mul(lower.invm(ec.curve.n)).umod(ec.curve.n);
 }
 
-export const createSockets = async (wsEndpoints: string[]): Promise<Socket[]> => {
-  return wsEndpoints.map((wsEndpoint) => {
-    if (wsEndpoint === null || wsEndpoint === undefined) {
-      return null;
-    }
-    return io(wsEndpoint, { path: "/tss/socket.io", transports: ["websocket", "polling"], withCredentials: true, reconnectionDelayMax: 10000, reconnectionAttempts: 10 });
-  });
-};
-
-
 const jwtPrivateKey = `-----BEGIN PRIVATE KEY-----\nMEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCCD7oLrcKae+jVZPGx52Cb/lKhdKxpXjl9eGNa1MlY57A==\n-----END PRIVATE KEY-----`;
 export const generateIdToken = (email: string) => {
   const alg = "ES256";
@@ -128,26 +58,37 @@ export const generateIdToken = (email: string) => {
   };
 
   const options = {
-    expiresIn: 120,
-    algorithm: alg,
+    "expiresIn": "120",
+    "algorithm": alg,
   };
 
   const header = { alg, typ: "JWT" };
 
-  const token = rsa.KJUR.jws.JWS.sign(alg, header, payload, jwtPrivateKey, JSON.stringify(options));
+  const token = KJUR.jws.JWS.sign(alg, header, payload, jwtPrivateKey, options);
 
   return token;
 };
 
 
-export async function fetchPostboxKeyAndSigs(opts: { verifierName: string; verifierId: string; }) {
+export async function fetchPostboxKeyAndSigs(opts: {
+  verifierName: string,
+  verifierId: string,
+}, network: TORUS_SAPPHIRE_NETWORK_TYPE) {
+  const networkDetails = fetchLocalConfig(network, "secp256k1");
+  console.log("networkDetails", networkDetails);
+  const torus = new TorusUtils({
+    clientId: "torus-default",
+    network,
+    enableOneKey: true,
+  });
+
   const { verifierName, verifierId } = opts;
   const token = generateIdToken(verifierId);
 
-  const retrieveSharesResponse = await torus.retrieveShares(torusNodeEndpoints, verifierName, { verifier_id: verifierId }, token);
-
+  const torusKeyData = await torus.retrieveShares(networkDetails.torusNodeSSSEndpoints, networkDetails.torusIndexes, verifierName, { verifier_id: verifierId }, token);
+  const {  nodesData, sessionData } = torusKeyData;
   const signatures: string[] = [];
-  retrieveSharesResponse.sessionTokensData.filter((session) => {
+  sessionData.sessionTokenData.filter((session) => {
     if (session) {
       signatures.push(
         JSON.stringify({
@@ -159,28 +100,112 @@ export async function fetchPostboxKeyAndSigs(opts: { verifierName: string; verif
     return null;
   });
 
+  const postboxKey = TorusUtils.getPostboxKey(torusKeyData);
   return {
     signatures,
-    postboxkey: retrieveSharesResponse.privKey.toString(),
+    postboxkey: postboxKey,
+    nodeIndexes: nodesData.nodeIndexes.slice(0, 3)
   };
 }
 
-export async function assignTssKey(opts: { verifierName: string; verifierId: string; tssTag?: "default"; nonce: string; }) {
-  const { verifierName, verifierId, tssTag = "default", nonce } = opts;
-  const extendedVerifierId = `${verifierId}\u0015${tssTag}\u0016${nonce}`;
-  const pubKeyDetails = await torus.getPublicAddress(
-    torusNodeEndpoints,
-    { verifier: verifierName, verifierId: verifierId, extendedVerifierId: extendedVerifierId },
-    true
-  );
-
-  return pubKeyDetails;
-}
-
-export function getTSSPubKey(dkgPubKey: { x: string; y: string; }, userSharePubKey: { x: string; y: string; }, userTSSIndex: number): EC.curve.base.BasePoint {
+export function getTSSPubKey(dkgPubKey: HexPoint, userSharePubKey: HexPoint, userTSSIndex: number): curve.base.BasePoint {
   const serverLagrangeCoeff = getLagrangeCoeffs([1, userTSSIndex], 1);
   const userLagrangeCoeff = getLagrangeCoeffs([1, userTSSIndex], userTSSIndex);
   const serverTerm = ecPoint(dkgPubKey).mul(serverLagrangeCoeff);
   const userTerm = ecPoint(userSharePubKey).mul(userLagrangeCoeff);
   return serverTerm.add(userTerm);
 }
+
+export function serializeScalar_Secp256k1(s: BN): Buffer {
+  return s.toArrayLike(Buffer, "be", 32);
+}
+
+export function deserializeScalar_Secp256k1(b: Buffer): BN {
+  return new BN(b);
+}
+
+export function serializePoint_Secp256k1_ConcatXY(p: curve.base.BasePoint): Buffer {
+  const pubKeyX = p.getX().toString(16, 64);
+  const pubKeyY = p.getY().toString(16, 64);
+  const pubKeyHex = `${pubKeyX}${pubKeyY}`;
+  return Buffer.from(pubKeyHex, "hex");
+}
+
+export function deserializePoint_Secp256k1_ConcatXY(ec: EC.ec, b: Buffer): curve.base.BasePoint {
+  const x = b.subarray(0, 32).toString("hex");
+  const y = b.subarray(32, 64).toString("hex");
+  return ec.keyFromPublic({ x, y }).getPublic();
+}
+
+export function generateRandomEmail() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let email = '';
+  for (let i = 0; i < 10; i++) {
+    email += chars[Math.floor(Math.random() * chars.length)];
+  }
+  email += '@example.com';
+  return email;
+}
+
+export function generateEndpoints(parties: number, clientIndex: number, network: TORUS_SAPPHIRE_NETWORK_TYPE, nodeIndexes: number[] = []) {
+  console.log("generateEndpoints node indexes", nodeIndexes);
+  const networkConfig = fetchLocalConfig(network, "secp256k1");
+  const endpoints = [];
+  const tssWSEndpoints = [];
+  const partyIndexes = [];
+
+  for (let i = 0; i < parties; i++) {
+    partyIndexes.push(i);
+
+    if (i === clientIndex) {
+      endpoints.push(null);
+      tssWSEndpoints.push(null);
+    } else {
+      endpoints.push(networkConfig.torusNodeTSSEndpoints[nodeIndexes[i] ?  nodeIndexes[i] - 1 : i]);
+      let wsEndpoint = networkConfig.torusNodeEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i]
+      if (wsEndpoint) {
+        const urlObject = new URL(wsEndpoint);
+        wsEndpoint = urlObject.origin;
+      }
+      tssWSEndpoints.push(wsEndpoint);
+    }
+  }
+
+  return {
+    endpoints: endpoints,
+    tssWSEndpoints: tssWSEndpoints,
+    partyIndexes: partyIndexes
+  };
+}
+
+export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
+  return wsEndpoints.map((wsEndpoint) => {
+    if (wsEndpoint === null || wsEndpoint === undefined) {
+      return null as any;
+    }
+    return io(wsEndpoint, {
+      path: "/tss/socket.io",
+      query: { sessionId },
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: 5,
+    });
+  });
+};
+
+export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
+  const sockets = await createSockets(tssWSEndpoints, sessionId);
+  // wait for websockets to be connected
+  await new Promise((resolve) => {
+    const checkConnectionTimer = setInterval(() => {
+      for (let i = 0; i < sockets.length; i++) {
+        if (sockets[i] !== null && !sockets[i].connected) return;
+      }
+      clearInterval(checkConnectionTimer);
+      resolve(true);
+    }, 100);
+  });
+
+  return sockets;
+};
