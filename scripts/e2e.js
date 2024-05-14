@@ -23,7 +23,7 @@ function exitPromise(process) {
   });
   console.log("Done.");
 
-  const ciProcess = spawn("node", ["scripts/browser-test.js", 3], { stdio: "inherit" });
+  const ciProcess = spawn("node", ["scripts/browser-test.js", 2], { stdio: "inherit" });
   const code = await exitPromise(ciProcess);
 
   appProcess.kill();
