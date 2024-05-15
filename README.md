@@ -29,8 +29,8 @@ wasm-pack build --release --target web
 
 ### Step 2
 
-Copy the files from `dkls/pkg` (except the WASM and the package.json) to `packages/tss-lib`.
+Copy the files from `dkls/pkg/` to `packages/tss-lib/src/pkg/`.
 
 ### Step 3
 
-Copy the WASM file from `dkls/pkg` to `packages/tss-lib-wasm`.
+Copy `dkls.d.ts` to `packages/tss-client/src/`.
