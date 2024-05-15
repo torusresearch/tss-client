@@ -5,28 +5,18 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require("copy-webpack-plugin");
 /** @type {import("webpack").Configuration} */
 module.exports = (env) => {
-  console.log("env", env);
   return {
     entry: env.prod ? "./src/prod.ts" : "./src/local.ts",
     output: {
       path: path.resolve(__dirname, "./dist"),
       filename: "test.bundle.js",
     },
-    devtool: 'source-map',
     module: {
       rules: [
         {
           test: /\.([cm]?ts|tsx)$/,
           loader: 'ts-loader',
         },
-        {
-          test: /\.(js|mjs|jsx)$/,
-          enforce: "pre",
-          loader: require.resolve("source-map-loader"),
-          resolve: {
-            fullySpecified: false,
-          },
-        }
       ],
     },
     resolve: {
