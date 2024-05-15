@@ -21,7 +21,7 @@ if (globalThis.js_read_msg === undefined) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
-      return tss_client._workerSupported || "unsupported";
+      return "unsupported";
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -127,8 +127,6 @@ export class Client {
 
   public _consumed: boolean;
 
-  public _workerSupported: string;
-
   public _sLessThanHalf: boolean;
 
   private _precomputeComplete: number[] = [];
@@ -175,7 +173,6 @@ export class Client {
     this.websocketOnly = _websocketOnly;
     this.log = console.log;
     this._consumed = false;
-    this._workerSupported = "unsupported";
     this._sLessThanHalf = true;
     this.tssLib = _tssLib;
 
