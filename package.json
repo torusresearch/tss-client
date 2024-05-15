@@ -15,7 +15,7 @@
     "pack:lerna": "lerna exec -- 'npm pack'",
     "publish:lerna": "yarn clean && yarn && yarn run build && lerna publish",
     "just:publish:lerna": "lerna publish",
-    "serve:local":"cd packages/tss-web-example && webpack serve"
+    "serve:local":"cd packages/web-example && webpack serve"
   },
   "keywords": [],
   "author": "Web3Auth",
