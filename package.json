@@ -17,7 +17,8 @@
     "just:publish:lerna": "lerna publish",
     "serve:example": "cd packages/web-example && npm run serve",
     "serve:example:local": "cd packages/web-example && npm run serve:local",
-    "e2e": "node scripts/e2e.js"
+    "test:ci": "node scripts/e2e.js",
+    "test:local": "node scripts/e2e.js --env=local"
   },
   "keywords": [],
   "author": "Web3Auth",

@@ -11,6 +11,11 @@ function exitPromise(process) {
 
 (async () => {
   const rootDir = path.join(__dirname, "..");
+  let serveCmd = "serve";
+  
+  if (process.argv.length > 2 && process.argv[2].trim().startsWith("--env=")) {
+    serveCmd = process.argv[2].split("=")[1] && process.argv[2].split("=")[1] === "local" ? "serve:local" : "serve";
+  }
 
   const appDir = path.join(rootDir, "/packages/web-example");
   console.log("appDir", appDir);
