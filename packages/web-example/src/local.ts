@@ -1,15 +1,13 @@
-import { Client } from "@toruslabs/tss-client";
+import { Client, localStorageDB } from "@toruslabs/tss-client";
+import tssLib from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
-import { privateToAddress } from "ethereumjs-util";
+import { privateToAddress } from "@ethereumjs/util";
 import keccak256 from "keccak256";
-import * as tss from "@toruslabs/tss-lib";
 
-import { getEcCrypto } from "./utils";
+import { deserializePoint_Secp256k1_ConcatXY, deserializeScalar_Secp256k1, getEcCrypto, serializePoint_Secp256k1_ConcatXY, serializeScalar_Secp256k1 } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";
 
-// NOTE: Calls to this route should be evenly distributed across servers
-const tssImportUrl = `http://localhost:8000/clientWasm`;
 
 const DELIMITERS = {
     Delimiter1: "\u001c",
@@ -34,6 +32,7 @@ const log = (...args: unknown[]) => {
   
 const setupMockShares = async (endpoints: string[], parties: number[], session: string) => {
   const privKey = new BN(eccrypto.generatePrivate());
+
   const pubKeyElliptic = ec.curve.g.mul(privKey);
   const pubKeyX = pubKeyElliptic.getX().toString(16, 64);
   const pubKeyY = pubKeyElliptic.getY().toString(16, 64);
@@ -41,9 +40,9 @@ const setupMockShares = async (endpoints: string[], parties: number[], session: 
   const pubKey = Buffer.from(pubKeyHex, "hex").toString("base64");
 
   // distribute shares to servers and local device
-  const share = await distributeShares(privKey, parties, endpoints, clientIndex, session);
+  await distributeShares(privKey, parties, endpoints, clientIndex, session);
 
-  return { share, pubKey, privKey };
+  return { pubKey, privKey };
 };
 
 const setupSockets = async (tssWSEndpoints: string[]) => {
@@ -60,6 +59,7 @@ const setupSockets = async (tssWSEndpoints: string[]) => {
     }, 100);
   });
 
+  console.log("sockets", tssWSEndpoints, sockets);
   return sockets;
 };
 
@@ -84,7 +84,88 @@ const generateEndpoints = (parties: number, clientIndex: number) => {
 };
 
 
-const runTest = async () => {
+const runPostNonceTest = async () => {
+  // this identifier is only required for testing,
+  // so that clients cannot override shares of actual users incase
+  // share route is exposed in production, which is exposed only in development/testing
+  // by default.
+  const nonce = ec.genKeyPair().getPrivate();
+
+  const testingRouteIdentifier = "testingShares";
+  const randomNonce = keccak256(generatePrivate().toString("hex") + Date.now());
+  const vid = `test_verifier_name${DELIMITERS.Delimiter1}test_verifier_id`;
+  const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
+    DELIMITERS.Delimiter4
+    }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
+  
+  // generate mock signatures.
+  const signatures = getSignatures();
+
+  // const session = `test:${Date.now()}`;
+
+  const parties = 4;
+  const clientIndex = parties - 1;
+
+  // generate endpoints for servers
+  const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
+
+  // setup mock shares, sockets and tss wasm files.
+  const [{ pubKey, privKey }, sockets] = await Promise.all([
+    setupMockShares(endpoints, partyIndexes, session),
+    setupSockets(tssWSEndpoints),
+  ]);
+
+  const serverCoeffs: Record<number, string> = {};
+  const participatingServerDKGIndexes = [1, 2, 3]; 
+
+  for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
+    const serverIndex = participatingServerDKGIndexes[i];
+    serverCoeffs[serverIndex] = new BN(1).toString("hex");
+  }
+
+  // Get the share and add nonce.
+  const share = await localStorageDB.get(`session-${session}:share`);
+  const shareBuffer = Buffer.from(share, "base64");
+  const shareBN = deserializeScalar_Secp256k1(shareBuffer).add(nonce).umod(ec.n);
+  const shareDerived = serializeScalar_Secp256k1(shareBN).toString("base64");
+
+  // Add nonce to pub key.
+  const pubKeyBuffer = Buffer.from(pubKey, "base64");
+  const pubKeyPoint = deserializePoint_Secp256k1_ConcatXY(ec, pubKeyBuffer);
+  const nonceBuffer = serializeScalar_Secp256k1(nonce);
+  const noncePoint = ec.keyFromPrivate(nonceBuffer).getPublic();
+  const pubKeyDerivedPoint = pubKeyPoint.add(noncePoint);
+  const pubKeyDerived = serializePoint_Secp256k1_ConcatXY(pubKeyDerivedPoint).toString("base64");
+
+  // Initialize client.
+  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, shareDerived, pubKeyDerived, true, tssLib);
+  client.log = log;
+
+  // Run precompute protocol.
+  client.precompute({ signatures, server_coeffs: serverCoeffs, _transport: 1, nonce: nonceBuffer.toString("base64") });
+  await client.ready();
+
+  // Run signing protocol.
+  const signature = await client.sign(msgHash.toString("base64"), true, msg, "keccak256", { signatures });
+
+  const hexToDecimal = (x: Buffer) => ec.keyFromPrivate(x).getPrivate().toString(10);
+  const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
+
+  client.log(`pubKeyDerived, ${JSON.stringify(pubKeyDerived)}`);
+  client.log(`msgHash: 0x${msgHash.toString("hex")}`);
+  client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
+  client.log(`address: 0x${Buffer.from(privateToAddress(privKey.toArrayLike(Buffer, "be", 32))).toString("hex")}`);
+  const passed = ec.verify(msgHash, signature, pubk);
+
+  client.log(`passed: ${passed}`);
+  client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
+  client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
+  await client.cleanup({ signatures });
+  client.log("client cleaned up");
+};
+
+
+const runPreNonceTest = async () => {
   // this identifier is only required for testing,
   // so that clients cannot override shares of actual users incase
   // share route is exposed in production, which is exposed only in development/testing
@@ -108,50 +189,51 @@ const runTest = async () => {
   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
 
   // setup mock shares, sockets and tss wasm files.
-  const [{ share, pubKey, privKey }, sockets] = await Promise.all([
+  const [{ pubKey, privKey }, sockets] = await Promise.all([
     setupMockShares(endpoints, partyIndexes, session),
     setupSockets(tssWSEndpoints),
-    tss.default(tssImportUrl)
   ]);
 
-  const serverCoeffs: Record<number,string> = {};
+  const serverCoeffs: Record<number, string> = {};
   const participatingServerDKGIndexes = [1, 2, 3]; 
 
   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
     const serverIndex = participatingServerDKGIndexes[i];
     serverCoeffs[serverIndex] = new BN(1).toString("hex");
   }
-
-  console.log(sockets);
-  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssImportUrl);
+  // get the shares.
+  const share = await localStorageDB.get(`session-${session}:share`);
+  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssLib);
   client.log = log;
   // initiate precompute
-  console.log("starting precompute");
-  client.precompute(tss, { signatures, server_coeffs: serverCoeffs });
+  client.precompute({ signatures, server_coeffs: serverCoeffs, _transport: 1 });
   await client.ready();
-  // initiate signature.
-  
-  const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256", { signatures });
 
-  const hexToDecimal = (x: Buffer) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
+  // initiate signature.
+  const signature = await client.sign(msgHash.toString("base64"), true, msg, "keccak256", { signatures });
+
+  const hexToDecimal = (x: Buffer) => ec.keyFromPrivate(x).getPrivate().toString(10);
   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
 
   client.log(`pubkey, ${JSON.stringify(pubKey)}`);
   client.log(`msgHash: 0x${msgHash.toString("hex")}`);
   client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
-  client.log(`address: 0x${privateToAddress(Buffer.from(privKey.toString(16, 64), "hex")).toString("hex")}`);
+  client.log(`address: 0x${Buffer.from(privateToAddress(privKey.toArrayLike(Buffer, "be", 32))).toString("hex")}`);
   const passed = ec.verify(msgHash, signature, pubk);
 
   client.log(`passed: ${passed}`);
   client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
   client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-  await client.cleanup(tss, { signatures });
+  await client.cleanup({ signatures });
   client.log("client cleaned up");
 };
 
 export const runLocalServerTest = async()=>{
   try {
-    await runTest();
+    // for (let i = 0; i < 20; i++) {
+    await runPreNonceTest();
+    await runPostNonceTest();
+    // }
     console.log("test succeeded");
     document.title = "Test succeeded";
   } catch (error) {

@@ -1,9 +1,6 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-// TODO: Underlying library needs to use wasm file supplied with it instead of
-// downloading the wasm from the server, it is not necessary to re-download it.
-// Also see related comment on ga1 processing.
-import * as TssLib from "@toruslabs/tss-lib";
+import type TssLib from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
@@ -11,7 +8,6 @@ import { Socket } from "socket.io-client";
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
-import TssWebWorker from "./worker";
 
 // TODO: create namespace for globals
 if (globalThis.tss_clients === undefined) {
@@ -25,11 +21,7 @@ if (globalThis.js_read_msg === undefined) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`reading msg, ${msg_type}`);
     if (msg_type === "ga1_worker_support") {
-      // runs ga1_array processing on a web worker. Message processing is non-blocking, it is also sequential.
-      // TODO: Remove this web worker.
-      // There is no parallel benefit here. Additionally, removing this also will allow the
-      // dkls library to be used from tss-lib instead of being downloaded a second time from the server.
-      return tss_client._workerSupported || "unsupported";
+      return "unsupported";
     }
     const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
     if (!mm) {
@@ -59,31 +51,12 @@ if (globalThis.js_read_msg === undefined) {
   };
 }
 
-globalThis.process_ga1 = async (tssImportUrl: string, msg_data: string): Promise<string> => {
-  const worker = new TssWebWorker(tssImportUrl);
-  const res = worker.work<string>("process_ga1", [msg_data]);
-  return res;
-};
-
 if (globalThis.js_send_msg === undefined) {
   globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
     tss_client.log(`sending msg, ${msg_type}`);
     if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      globalThis
-        .process_ga1(tss_client.tssImportUrl, msg_data)
-        .then((processed_data: string) => {
-          tss_client.msgQueue.push({
-            session,
-            sender: party,
-            recipient: self_index,
-            msg_type: `${session}~ga1_data_processed`,
-            msg_data: processed_data,
-          });
-          return true;
-        })
-        .catch((err) => console.error(err));
-      return true;
+      throw new Error("ga1_data_unprocessed should not be sent directly");
     }
 
     if (tss_client.websocketOnly) {
@@ -140,7 +113,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssImportUrl: string;
+  public tssLib: TssLib;
 
   public _startPrecomputeTime: number;
 
@@ -153,8 +126,6 @@ export class Client {
   public log: Log;
 
   public _consumed: boolean;
-
-  public _workerSupported: string;
 
   public _sLessThanHalf: boolean;
 
@@ -183,7 +154,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssImportUrl: string
+    _tssLib: TssLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
@@ -200,11 +171,10 @@ export class Client {
     this.share = _share;
     this.pubKey = _pubKey;
     this.websocketOnly = _websocketOnly;
-    this.tssImportUrl = _tssImportUrl;
     this.log = console.log;
     this._consumed = false;
-    this._workerSupported = "unsupported";
     this._sLessThanHalf = true;
+    this.tssLib = _tssLib;
 
     _sockets.forEach((socket) => {
       if (socket) {
@@ -283,7 +253,7 @@ export class Client {
     });
   }
 
-  precompute(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
+  precompute(additionalParams?: Record<string, unknown>) {
     // check if sockets have connected and have an id;
     this.sockets.forEach((socket, party) => {
       if (socket !== null) {
@@ -345,11 +315,11 @@ export class Client {
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
       await Promise.all(precomputePromises);
-      this._signer = await tss.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-      this._rng = await tss.random_generator(Buffer.from(generatePrivate()).toString("base64"));
+      this._signer = await this.tssLib.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+      this._rng = await this.tssLib.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
-      await tss.setup(this._signer, this._rng);
-      const precomputeResult = await tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
+      await this.tssLib.setup(this._signer, this._rng);
+      const precomputeResult = await this.tssLib.precompute(new Uint8Array(this.parties), this._signer, this._rng);
       this.precomputed_value = precomputeResult;
       this._precomputeComplete.push(this.index);
       this._consumed = false;
@@ -363,7 +333,6 @@ export class Client {
   }
 
   async sign(
-    tss: typeof TssLib,
     msg: string,
     hash_only: boolean,
     original_message: string,
@@ -397,7 +366,7 @@ export class Client {
       const party = i;
       if (party === this.index) {
         // create signature fragment for this client
-        sigFragments.push(await tss.local_sign(msg, hash_only, this.precomputed_value));
+        sigFragments.push(await this.tssLib.local_sign(msg, hash_only, this.precomputed_value));
       } else {
         // collect signature fragment from all peers
         fragmentPromises.push(
@@ -435,8 +404,8 @@ export class Client {
       sigFragments.push(fragment);
     });
 
-    const R = await tss.get_r_from_precompute(this.precomputed_value);
-    const sig = await tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
+    const R = await this.tssLib.get_r_from_precompute(this.precomputed_value);
+    const sig = await this.tssLib.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
     this._endSignTime = Date.now();
 
     const sigHex = Buffer.from(sig, "base64").toString("hex");
@@ -462,10 +431,10 @@ export class Client {
     return this.endpoints[party];
   }
 
-  async cleanup(tss: typeof TssLib, additionalParams?: Record<string, unknown>) {
+  async cleanup(additionalParams?: Record<string, unknown>) {
     // free native objects
-    tss.random_generator_free(this._rng);
-    tss.threshold_signer_free(this._signer);
+    this.tssLib.random_generator_free(this._rng);
+    this.tssLib.threshold_signer_free(this._signer);
 
     // clear data for this client
     this._precomputeComplete = [];

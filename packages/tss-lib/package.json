@@ -1,26 +1,22 @@
 {
-  "name": "@toruslabs/tss-lib",
-  "version": "2.3.0",
+  "name": "@toruslabs/tss-dkls-lib",
+  "version": "2.3.3",
+  "description": "Packaged WASM library for DKLS threshold signing.",
+  "main": "dist/tssDklsLib.cjs.js",
+  "unpkg": "dist/tssDklsLib.umd.min.js",
+  "jsdelivr": "dist/tssDklsLib.umd.min.js",
+  "types": "dist/types/index.d.ts",
   "files": [
-    "wasm",
-    "browser.js",
-    "dkls.d.ts",
-    "dkls_bg.wasm.d.ts",
     "dist"
   ],
-  "main": "dist/tssLib.cjs.js",
-  "module": "dist/tssLib.esm.js",
-  "unpkg": "dist/tssLib.umd.min.js",
-  "jsdelivr": "dist/tssLib.umd.min.js",
-  "types": "dkls.d.ts",
   "scripts": {
-    "depcheck": "depcheck .",
-    "dev": "torus-scripts start",
+    "clean": "rm -rf dist",
+    "watch": "torus-scripts start",
     "build": "torus-scripts build",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "release": "torus-scripts release"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "gitHead": "a0acd762809f00707e6051ef300a5d6791e52bf8"
+  "devDependencies": {
+    "ts-loader": "^9.4.2"
+  }
 }

@@ -5,7 +5,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require("copy-webpack-plugin");
 /** @type {import("webpack").Configuration} */
 module.exports = {
-  entry: "./src/local.ts",
+  entry: process.env.NODE_ENV === "local" || process.env.NODE_ENV === "development" || process.env.NODE_ENV === "testing" ? "./src/local.ts" : "./src/prod.ts",
   output: {
     path: path.resolve(__dirname, "./dist"),
     filename: "test.bundle.js",
@@ -42,7 +42,7 @@ module.exports = {
       https: require.resolve("https-browserify"),
       os: require.resolve("os-browserify"),
       url: require.resolve("url"),
-      zlib: require.resolve("browserify-zlib"),
+      zlib: false,
     }
   },
   plugins: [
@@ -50,7 +50,7 @@ module.exports = {
       process: "process/browser",
       Buffer: ["buffer", "Buffer"],
     }),
-   new HtmlWebpackPlugin(), 
+   new HtmlWebpackPlugin(),
   ],
   mode: "development",
 };
