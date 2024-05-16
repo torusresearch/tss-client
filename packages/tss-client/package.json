@@ -31,7 +31,8 @@
     "@types/elliptic": "^6.4.18",
     "rimraf": "^5.0.5",
     "rollup-plugin-web-worker-loader": "^1.6.1",
-    "workerize-loader": "^2.0.2"
+    "workerize-loader": "^2.0.2",
+    "@toruslabs/tss-dkls-lib": "^2.3.3"
   },
   "publishConfig": {
     "access": "public"

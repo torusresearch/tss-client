@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
+import type TssLib from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
-import type * as TssLib from "./dkls";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
 
@@ -113,7 +113,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssLib: typeof TssLib;
+  public tssLib: TssLib;
 
   public _startPrecomputeTime: number;
 
@@ -154,7 +154,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: typeof TssLib
+    _tssLib: TssLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
