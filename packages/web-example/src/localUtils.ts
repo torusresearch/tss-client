@@ -1,3 +1,4 @@
+import { localStorageDB } from "@toruslabs/tss-client";
 import { ecsign } from "ethereumjs-util";
 import axios from "axios";
 import BN from "bn.js";
@@ -92,12 +93,17 @@ export const getSignatures = () => {
       return additiveShare.mul(getLagrangeCoeff(parties, party).invm(ec.curve.n)).umod(ec.curve.n);
     });
   
+    console.log(
+      "shares",
+      shares.map((s) => s.toString(16, 64))
+    );
+  
     const waiting = [];
-    let client_share = null;
     for (let i = 0; i < parties.length; i++) {
       const share = shares[i];
       if (i === localClientIndex) {
-        client_share =  Buffer.from(share.toString(16, 64), "hex").toString("base64");
+
+        waiting.push(localStorageDB.set(`session-${session}:share`, Buffer.from(share.toString(16, 64), "hex").toString("base64")));
         continue;
       }
       waiting.push(
@@ -110,5 +116,4 @@ export const getSignatures = () => {
       );
     }
     await Promise.all(waiting);
-    return client_share;
   };
