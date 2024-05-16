@@ -20,6 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@toruslabs/eccrypto": "^4.0.0",
+    "@types/chrome": "^0.0.268",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
     "ethereum-cryptography": "^2.1.3",
