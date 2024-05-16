@@ -6,6 +6,7 @@
     "dist"
   ],
   "main": "dist/tssClient.cjs.js",
+  "module": "dist/tssClient.esm.js",
   "unpkg": "dist/tssClient.umd.min.js",
   "jsdelivr": "dist/tssClient.umd.min.js",
   "types": "dist/types/index.d.ts",
