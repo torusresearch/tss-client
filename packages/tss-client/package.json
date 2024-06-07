@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@toruslabs/eccrypto": "^4.0.0",
+    "@toruslabs/tss-client-util": "file:../../../tss-server/packages/client-util",
     "@types/chrome": "^0.0.268",
     "bn.js": "^5.2.1",
     "elliptic": "^6.5.4",
