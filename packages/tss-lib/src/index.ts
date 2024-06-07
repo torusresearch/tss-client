@@ -1,4 +1,4 @@
-import * as lib from "./pkg";
+import * as lib from "./pkg/dkls";
 import wasmDataURL from "./pkg/dkls_bg.wasm";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

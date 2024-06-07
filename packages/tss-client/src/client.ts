@@ -113,7 +113,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssLib: TssLib;
+  public tssLib: typeof TssLib;
 
   public _startPrecomputeTime: number;
 
@@ -154,7 +154,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: TssLib
+    _tssLib: typeof TssLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");

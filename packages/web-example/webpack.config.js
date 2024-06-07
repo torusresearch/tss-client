@@ -1,8 +1,8 @@
 const path = require("path");
 const webpack = require("webpack");
 
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyPlugin = require("copy-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+
 /** @type {import("webpack").Configuration} */
 module.exports = {
   entry: process.env.NODE_ENV === "local" || process.env.NODE_ENV === "development" || process.env.NODE_ENV === "testing" ? "./src/local.ts" : "./src/prod.ts",
