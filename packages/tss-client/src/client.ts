@@ -60,7 +60,7 @@ if (globalThis.js_send_msg === undefined) {
     }
 
     if (tss_client.websocketOnly) {
-      const socket = tss_client.sockets[party];
+      const socket = tss_client.lookupSocket(party);
       socket.emit("send_msg", {
         session,
         sender: self_index,
@@ -106,6 +106,9 @@ export class Client {
   public sockets: Socket[];
 
   public endpoints: string[];
+
+  // Map from party id to party index.
+  public _partyIndexes: Map<number, number>;
 
   public share: string;
 
@@ -175,6 +178,8 @@ export class Client {
     this._consumed = false;
     this._sLessThanHalf = true;
     this.tssLib = _tssLib;
+
+    this._partyIndexes = new Map(_parties.map((pid, i) => [pid, i]));
 
     _sockets.forEach((socket) => {
       if (socket) {
@@ -270,7 +275,9 @@ export class Client {
       if (party !== this.index) {
         precomputePromises.push(
           new Promise((resolve, reject) => {
-            fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+            const ep = this.lookupEndpoint(this.session, party);
+            const socket = this.lookupSocket(party);
+            fetch(`${ep}/precompute`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -282,15 +289,15 @@ export class Client {
                     return endpoint;
                   }
                   // pass in different id for websocket connection for each server so that the server can communicate back
-                  return `websocket:${this.sockets[party].id}`;
+                  return `websocket:${socket.id}`;
                 }),
                 session: this.session,
                 parties: this.parties,
                 player_index: party,
                 threshold: this.parties.length,
                 pubkey: this.pubKey,
-                notifyWebsocketId: this.sockets[party].id,
-                sendWebsocket: this.sockets[party].id,
+                notifyWebsocketId: socket.id,
+                sendWebsocket: socket.id,
                 ...additionalParams,
               }),
             })
@@ -315,8 +322,8 @@ export class Client {
     const setupPrecompute = async () => {
       this._startPrecomputeTime = Date.now();
       await Promise.all(precomputePromises);
-      this._signer = await this.tssLib.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
-      this._rng = await this.tssLib.random_generator(Buffer.from(generatePrivate()).toString("base64"));
+      this._signer = this.tssLib.threshold_signer(this.session, this.index, this.parties.length, this.parties.length, this.share, this.pubKey);
+      this._rng = this.tssLib.random_generator(Buffer.from(generatePrivate()).toString("base64"));
 
       await this.tssLib.setup(this._signer, this._rng);
       const precomputeResult = await this.tssLib.precompute(new Uint8Array(this.parties), this._signer, this._rng);
@@ -428,7 +435,13 @@ export class Client {
 
   lookupEndpoint(session: string, party: number): string {
     if (session !== this.session) throw new Error("incorrect session when looking up endpoint");
-    return this.endpoints[party];
+    const pix = this._partyIndexes.get(party);
+    return this.endpoints[pix];
+  }
+
+  lookupSocket(party: number): Socket {
+    const pix = this._partyIndexes.get(party);
+    return this.sockets[pix];
   }
 
   async cleanup(additionalParams?: Record<string, unknown>) {
