@@ -13,7 +13,7 @@
     "depcheck": "lerna run depcheck --parallel",
     "lint:fix": "eslint --fix 'src/**/*.ts' 'src/**/*.js'",
     "pack:lerna": "lerna exec -- 'npm pack'",
-    "publish:lerna": "yarn clean && yarn && yarn run build && lerna publish",
+    "publish:lerna": "npm run clean && npm install && npm run build && lerna publish",
     "just:publish:lerna": "lerna publish",
     "serve:local": "cd packages/web-example && webpack serve:local",
     "serve:devnet": "cd packages/web-example && webpack serve:devnet",
