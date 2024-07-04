@@ -3,7 +3,6 @@
   "compilerOptions": {
     "baseUrl": "./",
     "allowJs": true,
-    "skipLibCheck": true,
     "paths": {
       "@toruslabs/*": ["packages/tss-*"]
     }
