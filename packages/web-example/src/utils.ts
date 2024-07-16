@@ -146,37 +146,6 @@ export function generateRandomEmail() {
   return email;
 }
 
-export function generateEndpoints(parties: number, clientIndex: number, network: TORUS_SAPPHIRE_NETWORK_TYPE, nodeIndexes: number[] = []) {
-  console.log("generateEndpoints node indexes", nodeIndexes);
-  const networkConfig = fetchLocalConfig(network, "secp256k1");
-  const endpoints = [];
-  const tssWSEndpoints = [];
-  const partyIndexes = [];
-
-  for (let i = 0; i < parties; i++) {
-    partyIndexes.push(i);
-
-    if (i === clientIndex) {
-      endpoints.push(null);
-      tssWSEndpoints.push(null);
-    } else {
-      endpoints.push(networkConfig.torusNodeTSSEndpoints[nodeIndexes[i] ?  nodeIndexes[i] - 1 : i]);
-      let wsEndpoint = networkConfig.torusNodeEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i];
-      if (wsEndpoint) {
-        const urlObject = new URL(wsEndpoint);
-        wsEndpoint = urlObject.origin;
-      }
-      tssWSEndpoints.push(wsEndpoint);
-    }
-  }
-
-  return {
-    endpoints: endpoints,
-    tssWSEndpoints: tssWSEndpoints,
-    partyIndexes: partyIndexes
-  };
-}
-
 export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
   return wsEndpoints.map((wsEndpoint) => {
     if (wsEndpoint === null || wsEndpoint === undefined) {

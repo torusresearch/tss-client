@@ -1,5 +1,5 @@
 // tss server tests
-import { Client, getDKLSCoeff } from "@toruslabs/tss-client";
+import { Client, generateEndpoints, getDKLSCoeff } from "@toruslabs/tss-client";
 import tssLib from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { generatePrivate } from "eccrypto";
@@ -7,7 +7,7 @@ import keccak256 from "keccak256";
 import TorusServiceProvider from "@tkey-mpc/service-provider-torus";
 import { MockStorageLayer } from "@tkey-mpc/storage-layer-torus";
 import ThresholdKey from "@tkey-mpc/default";
-import { fetchPostboxKeyAndSigs, generateEndpoints, getEcCrypto, getTSSPubKey, setupSockets, generateRandomEmail } from "./utils";
+import { fetchPostboxKeyAndSigs, getEcCrypto, getTSSPubKey, setupSockets, generateRandomEmail } from "./utils";
 import { getPubKeyPoint } from "@tkey-mpc/common-types";
 import { fetchLocalConfig } from "@toruslabs/fnd-base";
 import { TORUS_NETWORK_TYPE } from "@toruslabs/constants";
@@ -108,7 +108,8 @@ const runTest = async (testConfig: TestConfig) => {
     throw new Error(`error getting tss-pub-key: ${err}`);
   });
   // generate endpoints for servers
-  const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex, network, nodeIndexes);
+  const localConfig = fetchLocalConfig(network, "secp256k1");
+  const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex, localConfig.torusNodeTSSEndpoints, localConfig.torusNodeEndpoints, nodeIndexes);
   console.log("endpoints", endpoints, tssWSEndpoints);
   const dkgTssPubKey = { x: pubKeyDetails.x.toString("hex"), y: pubKeyDetails.y.toString("hex") };
 

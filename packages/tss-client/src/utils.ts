@@ -112,21 +112,33 @@ export function getTSSPubKey(dkgPubKey: PointHex, userSharePubKey: key, userTSSI
   return serverTerm.add(userTerm);
 }
 
-export const generateEndpoints = (parties: number, clientIndex: number) => {
-  const endpoints: (string | null)[] = [];
-  const tssWSEndpoints: (string | null)[] = [];
-  const partyIndexes: number[] = [];
+export const generateEndpoints = (parties: number, clientIndex: number, tssEndpoints: string[], wsEndpoints: string[], nodeIndexes: number[]) => {
+  const endpoints = [];
+  const tssWSEndpoints = [];
+  const partyIndexes = [];
+
   for (let i = 0; i < parties; i++) {
     partyIndexes.push(i);
+
     if (i === clientIndex) {
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else {
-      endpoints.push(`https://sapphire-${i + 1}.auth.network/tss`);
-      tssWSEndpoints.push(`https://sapphire-${i + 1}.auth.network`);
+      endpoints.push(tssEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i]);
+      let wsEndpoint = wsEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i];
+      if (wsEndpoint) {
+        const urlObject = new URL(wsEndpoint);
+        wsEndpoint = urlObject.origin;
+      }
+      tssWSEndpoints.push(wsEndpoint);
     }
   }
-  return { endpoints, tssWSEndpoints, partyIndexes };
+
+  return {
+    endpoints,
+    tssWSEndpoints,
+    partyIndexes,
+  };
 };
 
 export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
