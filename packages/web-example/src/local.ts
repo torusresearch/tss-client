@@ -63,6 +63,7 @@ const setupSockets = async (tssWSEndpoints: string[]) => {
   return sockets;
 };
 
+// This is specifically for local testing
 const generateEndpoints = (parties: number, clientIndex: number) => {
   const endpoints: string[] = [];
   const tssWSEndpoints: string[] = [];
