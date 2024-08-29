@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-import type TssLib from "@toruslabs/tss-dkls-lib";
+import type { WasmLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
 import { Socket } from "socket.io-client";
@@ -113,7 +113,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssLib: typeof TssLib;
+  public tssLib: WasmLib;
 
   public _startPrecomputeTime: number;
 
@@ -154,7 +154,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: typeof TssLib
+    _tssLib: WasmLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
