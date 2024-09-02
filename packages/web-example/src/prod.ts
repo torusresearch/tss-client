@@ -1,6 +1,6 @@
 // tss server tests
 import { Client, getDKLSCoeff } from "@toruslabs/tss-client";
-import tssLib from "@toruslabs/tss-dkls-lib";
+import { load as loadLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { generatePrivate } from "eccrypto";
 import keccak256 from "keccak256";
@@ -148,7 +148,10 @@ const runTest = async (testConfig: TestConfig) => {
     serverCoeffs[serverIndex] = getDKLSCoeff(false, participatingServerDKGIndexes, userTSSIndex, serverIndex).toString("hex");
   }
 
+  // Load WASM lib.
+  const tssLib = await loadLib();
 
+  // Initialize client.
   const tssProcessingStart = window.performance.now();
   const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssLib);
   console.log("doing tss precompute");
