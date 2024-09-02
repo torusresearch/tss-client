@@ -23,5 +23,8 @@ export function loadSync(): WasmLib {
 
 export const tssLib = {
   keyType: "secp256k1",
-  lib,
+  load,
+  loadSync,
 };
+
+export default tssLib;
