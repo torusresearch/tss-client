@@ -1,4 +1,3 @@
 module.exports = {
-  ...require("@toruslabs/config/torus.config"),
-  "analyzerMode": "static",
+  ...require("@toruslabs/config/torus.config")
 };
