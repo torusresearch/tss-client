@@ -1,4 +1,6 @@
-import { Client, localStorageDB } from "@toruslabs/tss-client";
+import { Client } from "@toruslabs/tss-client";
+import { localStorageDB } from "./mockDB";
+
 import { load as loadLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";

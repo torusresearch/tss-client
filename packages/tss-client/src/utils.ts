@@ -86,13 +86,13 @@ export const getDKLSCoeff = (isUser: boolean, participatingServerIndexes: number
   return coeff;
 };
 
-export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
+export const createSockets = async (wsEndpoints: string[], sessionId: string, socketPath = "/tss/socket.io"): Promise<Socket[]> => {
   return wsEndpoints.map((wsEndpoint) => {
     if (wsEndpoint === null || wsEndpoint === undefined) {
       return null;
     }
     return io(wsEndpoint, {
-      path: "/tss/socket.io",
+      path: socketPath,
       query: { sessionId },
       transports: ["websocket", "polling"],
       withCredentials: true,
@@ -112,21 +112,25 @@ export function getTSSPubKey(dkgPubKey: PointHex, userSharePubKey: key, userTSSI
   return serverTerm.add(userTerm);
 }
 
-export const generateEndpoints = (parties: number, clientIndex: number) => {
+export const generateEndpoints = (tssNodeEndpoints: string[], parties: number, clientIndex: number, nodeIndexes: number[]) => {
   const endpoints: (string | null)[] = [];
   const tssWSEndpoints: (string | null)[] = [];
   const partyIndexes: number[] = [];
+  const nodeIndexesReturned: number[] = [];
+
   for (let i = 0; i < parties; i++) {
     partyIndexes.push(i);
     if (i === clientIndex) {
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else {
-      endpoints.push(`https://sapphire-${i + 1}.auth.network/tss`);
-      tssWSEndpoints.push(`https://sapphire-${i + 1}.auth.network`);
+      const targetNodeIndex = nodeIndexes[i] - 1;
+      endpoints.push(tssNodeEndpoints[targetNodeIndex]);
+      tssWSEndpoints.push(new URL(tssNodeEndpoints[targetNodeIndex]).origin);
+      nodeIndexesReturned.push(nodeIndexes[i]);
     }
   }
-  return { endpoints, tssWSEndpoints, partyIndexes };
+  return { endpoints, tssWSEndpoints, partyIndexes, nodeIndexesReturned };
 };
 
 export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
