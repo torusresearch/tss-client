@@ -1,94 +1,13 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
-import type TssLib from "@toruslabs/tss-dkls-lib";
+import type { WasmLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
-import { Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
-
-// TODO: create namespace for globals
-if (globalThis.tss_clients === undefined) {
-  // Cleanup leads to memory leaks with just an object. Should use a map instead.
-  // TODO: This should be singular
-  globalThis.tss_clients = new Map();
-}
-
-if (globalThis.js_read_msg === undefined) {
-  globalThis.js_read_msg = async function (session: string, self_index: number, party: number, msg_type: string) {
-    const tss_client = globalThis.tss_clients.get(session) as Client;
-    tss_client.log(`reading msg, ${msg_type}`);
-    if (msg_type === "ga1_worker_support") {
-      return "unsupported";
-    }
-    const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-    if (!mm) {
-      // It is very important that this promise can reject, since it is passed through to dkls library and awaited internally. If it cannot reject and a message is lost,
-      // it will never resolve and hang indefinitely with no possibility of recovery.
-      return new Promise((resolve, reject) => {
-        let counter = 0;
-        const timer = setInterval(() => {
-          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-          if (found !== undefined) {
-            clearInterval(timer);
-            resolve(found.msg_data);
-          }
-          if (counter >= 1000) {
-            clearInterval(timer);
-            // TODO Fix wasm to handle error objects properly and then reject
-            // with Error instead of string.
-            //
-            // eslint-disable-next-line prefer-promise-reject-errors
-            reject("Message not received in a reasonable time");
-          }
-          counter++;
-        }, 10);
-      });
-    }
-    return mm.msg_data;
-  };
-}
-
-if (globalThis.js_send_msg === undefined) {
-  globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
-    const tss_client = globalThis.tss_clients.get(session) as Client;
-    tss_client.log(`sending msg, ${msg_type}`);
-    if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
-      throw new Error("ga1_data_unprocessed should not be sent directly");
-    }
-
-    if (tss_client.websocketOnly) {
-      const socket = tss_client.sockets[party];
-      socket.emit("send_msg", {
-        session,
-        sender: self_index,
-        recipient: party,
-        msg_type,
-        msg_data,
-      });
-    } else {
-      const sid = session.split(DELIMITERS.Delimiter4)[1];
-      const endpoint = tss_client.lookupEndpoint(session, party);
-      fetch(`${endpoint}/send`, {
-        method: "POST",
-        headers: {
-          [WEB3_SESSION_HEADER_KEY]: sid,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          session,
-          sender: self_index,
-          recipient: party,
-          msg_type,
-          msg_data,
-        }),
-      });
-    }
-    return true;
-  };
-}
 
 type Log = {
   (msg: string): void;
@@ -113,7 +32,7 @@ export class Client {
 
   public websocketOnly: boolean;
 
-  public tssLib: typeof TssLib;
+  public tssLib: WasmLib;
 
   public _startPrecomputeTime: number;
 
@@ -154,7 +73,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: typeof TssLib
+    _tssLib: WasmLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
@@ -472,4 +391,85 @@ export class Client {
       })
     );
   }
+}
+
+// TODO: create namespace for globals
+if (globalThis.tss_clients === undefined) {
+  // Cleanup leads to memory leaks with just an object. Should use a map instead.
+  // TODO: This should be singular
+  globalThis.tss_clients = new Map();
+}
+
+if (globalThis.js_read_msg === undefined) {
+  globalThis.js_read_msg = async function (session: string, self_index: number, party: number, msg_type: string) {
+    const tss_client = globalThis.tss_clients.get(session) as Client;
+    tss_client.log(`reading msg, ${msg_type}`);
+    if (msg_type === "ga1_worker_support") {
+      return "unsupported";
+    }
+    const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
+    if (!mm) {
+      // It is very important that this promise can reject, since it is passed through to dkls library and awaited internally. If it cannot reject and a message is lost,
+      // it will never resolve and hang indefinitely with no possibility of recovery.
+      return new Promise((resolve, reject) => {
+        let counter = 0;
+        const timer = setInterval(() => {
+          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
+          if (found !== undefined) {
+            clearInterval(timer);
+            resolve(found.msg_data);
+          }
+          if (counter >= 1000) {
+            clearInterval(timer);
+            // TODO Fix wasm to handle error objects properly and then reject
+            // with Error instead of string.
+            //
+
+            reject("Message not received in a reasonable time");
+          }
+          counter++;
+        }, 10);
+      });
+    }
+    return mm.msg_data;
+  };
+}
+
+if (globalThis.js_send_msg === undefined) {
+  globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
+    const tss_client = globalThis.tss_clients.get(session) as Client;
+    tss_client.log(`sending msg, ${msg_type}`);
+    if (msg_type.indexOf("ga1_data_unprocessed") > -1) {
+      throw new Error("ga1_data_unprocessed should not be sent directly");
+    }
+
+    if (tss_client.websocketOnly) {
+      const socket = tss_client.sockets[party];
+      socket.emit("send_msg", {
+        session,
+        sender: self_index,
+        recipient: party,
+        msg_type,
+        msg_data,
+      });
+    } else {
+      const sid = session.split(DELIMITERS.Delimiter4)[1];
+      const endpoint = tss_client.lookupEndpoint(session, party);
+      fetch(`${endpoint}/send`, {
+        method: "POST",
+        headers: {
+          [WEB3_SESSION_HEADER_KEY]: sid,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session,
+          sender: self_index,
+          recipient: party,
+          msg_type,
+          msg_data,
+        }),
+      });
+    }
+    return true;
+  };
 }

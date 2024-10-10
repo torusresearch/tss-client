@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import EC, { curve } from "elliptic";
 import { io, Socket } from "socket.io-client";
-import TorusUtils from "@toruslabs/torus.js";
+import { Torus as TorusUtils } from "@toruslabs/torus.js";
 import { KJUR } from "jsrsasign";
 import { TORUS_SAPPHIRE_NETWORK_TYPE } from "@toruslabs/constants";
 import { fetchLocalConfig } from "@toruslabs/fnd-base";
@@ -84,7 +84,14 @@ export async function fetchPostboxKeyAndSigs(opts: {
   const { verifierName, verifierId } = opts;
   const token = generateIdToken(verifierId);
 
-  const torusKeyData = await torus.retrieveShares(networkDetails.torusNodeSSSEndpoints, networkDetails.torusIndexes, verifierName, { verifier_id: verifierId }, token);
+  const torusKeyData = await torus.retrieveShares({
+    nodePubkeys: networkDetails.torusNodePub,
+    endpoints: networkDetails.torusNodeSSSEndpoints, 
+    indexes: networkDetails.torusIndexes, 
+    verifier: verifierName, 
+    verifierParams: { verifier_id: verifierId }, 
+    idToken: token
+  });
   const {  nodesData, sessionData } = torusKeyData;
   const signatures: string[] = [];
   sessionData.sessionTokenData.filter((session) => {
