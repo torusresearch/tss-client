@@ -43,6 +43,7 @@ module.exports = {
       os: require.resolve("os-browserify"),
       url: require.resolve("url"),
       zlib: false,
+      vm: false
     }
   },
   plugins: [

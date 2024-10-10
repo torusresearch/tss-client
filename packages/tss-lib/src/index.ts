@@ -1,16 +1,30 @@
-import * as lib from "./pkg/dkls";
+import initLib, * as lib from "./pkg/dkls";
 import wasmDataURL from "./pkg/dkls_bg.wasm";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const base64Data = (wasmDataURL as any).split("base64,")[1];
-const wasmBuffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+function wasm(): Uint8Array {
+  const base64Data = (wasmDataURL as unknown as string).split("base64,")[1];
+  const wasmBuffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+  return wasmBuffer;
+}
 
-lib.initSync(wasmBuffer);
+export type WasmLib = typeof lib;
 
-const tssLib = {
+export async function load(): Promise<WasmLib> {
+  const wasmBuffer = wasm();
+  await initLib(wasmBuffer);
+  return lib;
+}
+
+export function loadSync(): WasmLib {
+  const wasmBuffer = wasm();
+  lib.initSync(wasmBuffer);
+  return lib;
+}
+
+export const tssLib = {
   keyType: "secp256k1",
-  lib,
+  load,
+  loadSync,
 };
 
-export { tssLib };
-export default lib;
+export default tssLib;

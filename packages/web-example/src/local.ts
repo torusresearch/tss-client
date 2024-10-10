@@ -1,5 +1,7 @@
-import { Client, localStorageDB } from "@toruslabs/tss-client";
-import tssLib from "@toruslabs/tss-dkls-lib";
+import { Client } from "@toruslabs/tss-client";
+import { localStorageDB } from "./mockDB";
+
+import { load as loadLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
 import { privateToAddress } from "@ethereumjs/util";
@@ -138,6 +140,9 @@ const runPostNonceTest = async () => {
   const pubKeyDerivedPoint = pubKeyPoint.add(noncePoint);
   const pubKeyDerived = serializePoint_Secp256k1_ConcatXY(pubKeyDerivedPoint).toString("base64");
 
+  // Load WASM lib.
+  const tssLib = await loadLib();
+
   // Initialize client.
   const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, shareDerived, pubKeyDerived, true, tssLib);
   client.log = log;
@@ -204,6 +209,11 @@ const runPreNonceTest = async () => {
   }
   // get the shares.
   const share = await localStorageDB.get(`session-${session}:share`);
+
+  // Load WASM lib.
+  const tssLib = await loadLib();
+
+  // initialize client.
   const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssLib);
   client.log = log;
   // initiate precompute

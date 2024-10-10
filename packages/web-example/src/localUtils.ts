@@ -1,4 +1,4 @@
-import { localStorageDB } from "@toruslabs/tss-client";
+import { localStorageDB } from "./mockDB";
 import { ecsign } from "ethereumjs-util";
 import axios from "axios";
 import BN from "bn.js";

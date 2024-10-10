@@ -12,5 +12,5 @@ const cfg = {
 
 module.exports = {
   umdConfig: cfg,
-  cjsConfig: cfg,
+  cjsConfig: cfg
 };
