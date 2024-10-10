@@ -17,7 +17,6 @@
     "release": "torus-scripts release"
   },
   "devDependencies": {
-    "@rollup/plugin-wasm": "^6.2.2",
     "ts-loader": "^9.4.2"
   }
 }
