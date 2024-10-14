@@ -86,13 +86,13 @@ export const getDKLSCoeff = (isUser: boolean, participatingServerIndexes: number
   return coeff;
 };
 
-export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
+export const createSockets = async (wsEndpoints: string[], sessionId: string, socketPath = "/tss/socket.io"): Promise<Socket[]> => {
   return wsEndpoints.map((wsEndpoint) => {
     if (wsEndpoint === null || wsEndpoint === undefined) {
       return null;
     }
     return io(wsEndpoint, {
-      path: "/tss/socket.io",
+      path: socketPath,
       query: { sessionId },
       transports: ["websocket", "polling"],
       withCredentials: true,
@@ -112,10 +112,11 @@ export function getTSSPubKey(dkgPubKey: PointHex, userSharePubKey: key, userTSSI
   return serverTerm.add(userTerm);
 }
 
-export const generateEndpoints = (parties: number, clientIndex: number, tssEndpoints: string[], wsEndpoints: string[], nodeIndexes: number[]) => {
-  const endpoints = [];
-  const tssWSEndpoints = [];
-  const partyIndexes = [];
+export const generateEndpoints = (tssNodeEndpoints: string[], parties: number, clientIndex: number, nodeIndexes: number[]) => {
+  const endpoints: (string | null)[] = [];
+  const tssWSEndpoints: (string | null)[] = [];
+  const partyIndexes: number[] = [];
+  const nodeIndexesReturned: number[] = [];
 
   for (let i = 0; i < parties; i++) {
     partyIndexes.push(i);
@@ -124,25 +125,17 @@ export const generateEndpoints = (parties: number, clientIndex: number, tssEndpo
       endpoints.push(null);
       tssWSEndpoints.push(null);
     } else {
-      endpoints.push(tssEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i]);
-      let wsEndpoint = wsEndpoints[nodeIndexes[i] ? nodeIndexes[i] - 1 : i];
-      if (wsEndpoint) {
-        const urlObject = new URL(wsEndpoint);
-        wsEndpoint = urlObject.origin;
-      }
-      tssWSEndpoints.push(wsEndpoint);
+      const targetNodeIndex = nodeIndexes[i] - 1;
+      endpoints.push(tssNodeEndpoints[targetNodeIndex]);
+      tssWSEndpoints.push(new URL(tssNodeEndpoints[targetNodeIndex]).origin);
+      nodeIndexesReturned.push(nodeIndexes[i]);
     }
   }
-
-  return {
-    endpoints,
-    tssWSEndpoints,
-    partyIndexes,
-  };
+  return { endpoints, tssWSEndpoints, partyIndexes, nodeIndexesReturned };
 };
 
-export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
-  const sockets = await createSockets(tssWSEndpoints, sessionId);
+export const setupSockets = async (tssWSEndpoints: string[], sessionId: string, socketPath = "/tss/socket.io") => {
+  const sockets = await createSockets(tssWSEndpoints, sessionId, socketPath);
   // wait for websockets to be connected
   await new Promise((resolve) => {
     const checkConnectionTimer = setInterval(() => {

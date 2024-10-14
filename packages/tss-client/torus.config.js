@@ -1,3 +1,3 @@
 module.exports = {
-  ...require("@toruslabs/config/torus.config"),
+  ...require("@toruslabs/config/torus.config")
 };
