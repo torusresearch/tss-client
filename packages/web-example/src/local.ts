@@ -1,22 +1,28 @@
+/* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable no-console */
+import { privateToAddress } from "@ethereumjs/util";
 import { Client } from "@toruslabs/tss-client";
-import { localStorageDB } from "./mockDB";
-
 import { load as loadLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
-import { privateToAddress } from "@ethereumjs/util";
 import keccak256 from "keccak256";
 
-import { deserializePoint_Secp256k1_ConcatXY, deserializeScalar_Secp256k1, getEcCrypto, serializePoint_Secp256k1_ConcatXY, serializeScalar_Secp256k1 } from "./utils";
 import { createSockets, distributeShares, getSignatures } from "./localUtils";
-
+import { localStorageDB } from "./mockDB";
+import {
+  deserializePoint_Secp256k1_ConcatXY,
+  deserializeScalar_Secp256k1,
+  getEcCrypto,
+  serializePoint_Secp256k1_ConcatXY,
+  serializeScalar_Secp256k1,
+} from "./utils";
 
 const DELIMITERS = {
-    Delimiter1: "\u001c",
-    Delimiter2: "\u0015",
-    Delimiter3: "\u0016",
-    Delimiter4: "\u0017",
-  };
+  Delimiter1: "\u001c",
+  Delimiter2: "\u0015",
+  Delimiter3: "\u0016",
+  Delimiter4: "\u0017",
+};
 const servers = 4;
 const msg = "hello world";
 const msgHash = keccak256(msg);
@@ -24,14 +30,14 @@ const clientIndex = servers - 1;
 const ec = getEcCrypto();
 
 const log = (...args: unknown[]) => {
-    let msg = "";
-    args.forEach((arg) => {
-      msg += JSON.stringify(arg);
-      msg += " ";
-    });
-    console.log(msg);
-  };
-  
+  let msg = "";
+  args.forEach((arg) => {
+    msg += JSON.stringify(arg);
+    msg += " ";
+  });
+  console.log(msg);
+};
+
 const setupMockShares = async (endpoints: string[], parties: number[], session: string) => {
   const privKey = new BN(eccrypto.generatePrivate());
 
@@ -72,7 +78,7 @@ const generateEndpoints = (parties: number, clientIndex: number) => {
   const partyIndexes: number[] = [];
   let serverPortOffset = 0;
   const basePort = 8000;
-  for (let i = 0; i < parties ; i++) {
+  for (let i = 0; i < parties; i++) {
     partyIndexes.push(i);
     if (i === clientIndex) {
       endpoints.push(null);
@@ -86,7 +92,6 @@ const generateEndpoints = (parties: number, clientIndex: number) => {
   return { endpoints, tssWSEndpoints, partyIndexes };
 };
 
-
 const runPostNonceTest = async () => {
   // this identifier is only required for testing,
   // so that clients cannot override shares of actual users incase
@@ -99,8 +104,8 @@ const runPostNonceTest = async () => {
   const vid = `test_verifier_name${DELIMITERS.Delimiter1}test_verifier_id`;
   const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
     DELIMITERS.Delimiter4
-    }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
-  
+  }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
+
   // generate mock signatures.
   const signatures = getSignatures();
 
@@ -113,13 +118,10 @@ const runPostNonceTest = async () => {
   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
 
   // setup mock shares, sockets and tss wasm files.
-  const [{ pubKey, privKey }, sockets] = await Promise.all([
-    setupMockShares(endpoints, partyIndexes, session),
-    setupSockets(tssWSEndpoints),
-  ]);
+  const [{ pubKey, privKey }, sockets] = await Promise.all([setupMockShares(endpoints, partyIndexes, session), setupSockets(tssWSEndpoints)]);
 
   const serverCoeffs: Record<number, string> = {};
-  const participatingServerDKGIndexes = [1, 2, 3]; 
+  const participatingServerDKGIndexes = [1, 2, 3];
 
   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
     const serverIndex = participatingServerDKGIndexes[i];
@@ -170,7 +172,6 @@ const runPostNonceTest = async () => {
   client.log("client cleaned up");
 };
 
-
 const runPreNonceTest = async () => {
   // this identifier is only required for testing,
   // so that clients cannot override shares of actual users incase
@@ -181,8 +182,8 @@ const runPreNonceTest = async () => {
   const vid = `test_verifier_name${DELIMITERS.Delimiter1}test_verifier_id`;
   const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
     DELIMITERS.Delimiter4
-    }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
-  
+  }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
+
   // generate mock signatures.
   const signatures = getSignatures();
 
@@ -195,13 +196,10 @@ const runPreNonceTest = async () => {
   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
 
   // setup mock shares, sockets and tss wasm files.
-  const [{ pubKey, privKey }, sockets] = await Promise.all([
-    setupMockShares(endpoints, partyIndexes, session),
-    setupSockets(tssWSEndpoints),
-  ]);
+  const [{ pubKey, privKey }, sockets] = await Promise.all([setupMockShares(endpoints, partyIndexes, session), setupSockets(tssWSEndpoints)]);
 
   const serverCoeffs: Record<number, string> = {};
-  const participatingServerDKGIndexes = [1, 2, 3]; 
+  const participatingServerDKGIndexes = [1, 2, 3];
 
   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
     const serverIndex = participatingServerDKGIndexes[i];
@@ -239,7 +237,7 @@ const runPreNonceTest = async () => {
   client.log("client cleaned up");
 };
 
-export const runLocalServerTest = async()=>{
+export const runLocalServerTest = async () => {
   try {
     // for (let i = 0; i < 20; i++) {
     await runPreNonceTest();

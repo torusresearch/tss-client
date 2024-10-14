@@ -13,6 +13,8 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "socket.io-client":"^4.8.0",
+        "@toruslabs/constants": "^14.0.0",
         "@ethereumjs/util": "^9.0.1",
         "@tkey-mpc/chrome-storage": "^10.0.0",
         "@tkey-mpc/common-types": "^10.0.0",

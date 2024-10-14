@@ -1,19 +1,18 @@
-import BN from "bn.js";
-import EC, { curve } from "elliptic";
-import { io, Socket } from "socket.io-client";
-import { Torus as TorusUtils } from "@toruslabs/torus.js";
-import { KJUR } from "jsrsasign";
 import { TORUS_SAPPHIRE_NETWORK_TYPE } from "@toruslabs/constants";
 import { fetchLocalConfig } from "@toruslabs/fnd-base";
+import { Torus as TorusUtils } from "@toruslabs/torus.js";
+import BN from "bn.js";
+import EC, { curve } from "elliptic";
+import { KJUR } from "jsrsasign";
+import { io, Socket } from "socket.io-client";
 
 export function getEcCrypto(): EC.ec {
-  // eslint-disable-next-line new-cap
   return new EC.ec("secp256k1");
 }
 
 export interface HexPoint {
-  x: string,
-  y: string,
+  x: string;
+  y: string;
 }
 
 export function ecPoint(p: HexPoint): curve.base.BasePoint {
@@ -57,8 +56,8 @@ export const generateIdToken = (email: string) => {
   };
 
   const options = {
-    "expiresIn": "120",
-    "algorithm": alg,
+    expiresIn: "120",
+    algorithm: alg,
   };
 
   const header = { alg, typ: "JWT" };
@@ -68,13 +67,14 @@ export const generateIdToken = (email: string) => {
   return token;
 };
 
-
-export async function fetchPostboxKeyAndSigs(opts: {
-  verifierName: string,
-  verifierId: string,
-}, network: TORUS_SAPPHIRE_NETWORK_TYPE) {
+export async function fetchPostboxKeyAndSigs(
+  opts: {
+    verifierName: string;
+    verifierId: string;
+  },
+  network: TORUS_SAPPHIRE_NETWORK_TYPE
+) {
   const networkDetails = fetchLocalConfig(network, "secp256k1");
-  console.log("networkDetails", networkDetails);
   const torus = new TorusUtils({
     clientId: "torus-default",
     network,
@@ -86,13 +86,13 @@ export async function fetchPostboxKeyAndSigs(opts: {
 
   const torusKeyData = await torus.retrieveShares({
     nodePubkeys: networkDetails.torusNodePub,
-    endpoints: networkDetails.torusNodeSSSEndpoints, 
-    indexes: networkDetails.torusIndexes, 
-    verifier: verifierName, 
-    verifierParams: { verifier_id: verifierId }, 
-    idToken: token
+    endpoints: networkDetails.torusNodeSSSEndpoints,
+    indexes: networkDetails.torusIndexes,
+    verifier: verifierName,
+    verifierParams: { verifier_id: verifierId },
+    idToken: token,
   });
-  const {  nodesData, sessionData } = torusKeyData;
+  const { nodesData, sessionData } = torusKeyData;
   const signatures: string[] = [];
   sessionData.sessionTokenData.filter((session) => {
     if (session) {
@@ -110,7 +110,7 @@ export async function fetchPostboxKeyAndSigs(opts: {
   return {
     signatures,
     postboxkey: postboxKey,
-    nodeIndexes: nodesData.nodeIndexes.slice(0, 3)
+    nodeIndexes: nodesData.nodeIndexes.slice(0, 3),
   };
 }
 
@@ -144,12 +144,12 @@ export function deserializePoint_Secp256k1_ConcatXY(ec: EC.ec, b: Buffer): curve
 }
 
 export function generateRandomEmail() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let email = '';
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let email = "";
   for (let i = 0; i < 10; i++) {
     email += chars[Math.floor(Math.random() * chars.length)];
   }
-  email += '@example.com';
+  email += "@example.com";
   return email;
 }
 

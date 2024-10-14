@@ -134,8 +134,8 @@ export const generateEndpoints = (tssNodeEndpoints: string[], parties: number, c
   return { endpoints, tssWSEndpoints, partyIndexes, nodeIndexesReturned };
 };
 
-export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
-  const sockets = await createSockets(tssWSEndpoints, sessionId);
+export const setupSockets = async (tssWSEndpoints: string[], sessionId: string, socketPath = "/tss/socket.io") => {
+  const sockets = await createSockets(tssWSEndpoints, sessionId, socketPath);
   // wait for websockets to be connected
   await new Promise((resolve) => {
     const checkConnectionTimer = setInterval(() => {
