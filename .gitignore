@@ -8,3 +8,4 @@ pkg/dist
 pkg/*.tgz
 types/*
 .vscode
+lerna-debug.log
