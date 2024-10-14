@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import { generatePrivate } from "@toruslabs/eccrypto";
+import { MapQueue } from "@toruslabs/tss-client-util";
 import type { WasmLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import { keccak256 } from "ethereum-cryptography/keccak";
@@ -9,9 +10,13 @@ import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
 import { getEc } from "./utils";
 
+const MSG_READ_TIMEOUT = 10_000;
+
 type Log = {
   (msg: string): void;
 };
+
+type MsgKey = string;
 
 export class Client {
   public session: string;
@@ -19,8 +24,6 @@ export class Client {
   public index: number;
 
   public parties: number[];
-
-  public msgQueue: Msg[] = [];
 
   public sockets: Socket[];
 
@@ -59,6 +62,8 @@ export class Client {
   private _signer: number;
 
   private _rng: number;
+
+  private msgQueue = new MapQueue<MsgKey, Msg>();
 
   // this is required due to precompute not being marked async
   private _readyResolve: Promise<void> = null;
@@ -108,7 +113,7 @@ export class Client {
             this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
             return;
           }
-          this.msgQueue.push({ session, sender, recipient, msg_type, msg_data });
+          this.pushMessage({ session, sender, recipient, msg_type, msg_data });
           if (cb) cb();
         });
         // Add listener for completion
@@ -139,6 +144,10 @@ export class Client {
 
   get sid(): string {
     return this.session.split(DELIMITERS.Delimiter4)[1];
+  }
+
+  private static msgKey(sender: number, recipient: number, msg_type: string): MsgKey {
+    return JSON.stringify([sender, recipient, msg_type]);
   }
 
   async ready() {
@@ -391,6 +400,20 @@ export class Client {
       })
     );
   }
+
+  pushMessage(m: Msg) {
+    const k = Client.msgKey(m.sender, m.recipient, m.msg_type);
+    this.msgQueue.push(k, m);
+  }
+
+  async popMessage(sender: number, recipient: number, msg_type: string): Promise<Msg> {
+    const k = Client.msgKey(sender, recipient, msg_type);
+    const msg = await this.msgQueue.pop(k, MSG_READ_TIMEOUT);
+    if (!msg) {
+      throw new Error("timeout");
+    }
+    return msg;
+  }
 }
 
 // TODO: create namespace for globals
@@ -407,30 +430,7 @@ if (globalThis.js_read_msg === undefined) {
     if (msg_type === "ga1_worker_support") {
       return "unsupported";
     }
-    const mm = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-    if (!mm) {
-      // It is very important that this promise can reject, since it is passed through to dkls library and awaited internally. If it cannot reject and a message is lost,
-      // it will never resolve and hang indefinitely with no possibility of recovery.
-      return new Promise((resolve, reject) => {
-        let counter = 0;
-        const timer = setInterval(() => {
-          const found = tss_client.msgQueue.find((m) => m.sender === party && m.recipient === self_index && m.msg_type === msg_type);
-          if (found !== undefined) {
-            clearInterval(timer);
-            resolve(found.msg_data);
-          }
-          if (counter >= 1000) {
-            clearInterval(timer);
-            // TODO Fix wasm to handle error objects properly and then reject
-            // with Error instead of string.
-            //
-
-            reject("Message not received in a reasonable time");
-          }
-          counter++;
-        }, 10);
-      });
-    }
+    const mm = await tss_client.popMessage(party, self_index, msg_type);
     return mm.msg_data;
   };
 }
