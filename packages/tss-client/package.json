@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-client",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Client SDK for MPECDSA signing",
   "files": [
     "dist"
@@ -28,7 +28,7 @@
     "socket.io-client": "^4.8.0"
   },
   "devDependencies": {
-    "@toruslabs/tss-dkls-lib": "^4.0.0",
+    "@toruslabs/tss-dkls-lib": "^4.1.0",
     "@types/bn.js": "^5.1.6",
     "@types/chrome": "^0.0.268",
     "@types/elliptic": "^6.4.18"
