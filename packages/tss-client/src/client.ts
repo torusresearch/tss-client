@@ -115,6 +115,8 @@ export class Client {
 
   public tssLib: WasmLib;
 
+  public trackingId?: string;
+
   public _startPrecomputeTime: number;
 
   public _endPrecomputeTime: number;
@@ -154,7 +156,8 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: WasmLib
+    _tssLib: WasmLib,
+    _trackingId?: string
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
@@ -175,6 +178,7 @@ export class Client {
     this._consumed = false;
     this._sLessThanHalf = true;
     this.tssLib = _tssLib;
+    this.trackingId = _trackingId;
 
     _sockets.forEach((socket) => {
       if (socket) {
@@ -270,7 +274,12 @@ export class Client {
       if (party !== this.index) {
         precomputePromises.push(
           new Promise((resolve, reject) => {
-            fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
+            console.log("precompute party: ", party, "endpoint: ", this.lookupEndpoint(this.session, party));
+            let preComputeEndpoint = `${this.lookupEndpoint(this.session, party)}/precompute`;
+            if (this.trackingId) {
+              preComputeEndpoint += `?trackingId=${this.trackingId}`;
+            }
+            fetch(preComputeEndpoint, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -372,7 +381,11 @@ export class Client {
         fragmentPromises.push(
           new Promise((resolve, reject) => {
             const endpoint = this.lookupEndpoint(this.session, party);
-            fetch(`${endpoint}/sign`, {
+            let signEndpoint = `${endpoint}/sign`;
+            if (this.trackingId) {
+              signEndpoint += `?trackingId=${this.trackingId}`;
+            }
+            fetch(signEndpoint, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
