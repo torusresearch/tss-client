@@ -274,7 +274,6 @@ export class Client {
       if (party !== this.index) {
         precomputePromises.push(
           new Promise((resolve, reject) => {
-            console.log("precompute party: ", party, "endpoint: ", this.lookupEndpoint(this.session, party));
             let preComputeEndpoint = `${this.lookupEndpoint(this.session, party)}/precompute`;
             if (this.trackingId) {
               preComputeEndpoint += `?trackingId=${this.trackingId}`;
@@ -472,7 +471,11 @@ export class Client {
     await Promise.all(
       this.parties.map(async (party) => {
         if (party !== this.index) {
-          await fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
+          let cleanupEndpoint = `${this.lookupEndpoint(this.session, party)}/cleanup`;
+          if (this.trackingId) {
+            cleanupEndpoint += `?trackingId=${this.trackingId}`;
+          }
+          await fetch(cleanupEndpoint, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
