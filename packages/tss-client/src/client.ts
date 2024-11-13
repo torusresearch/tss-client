@@ -115,7 +115,7 @@ export class Client {
 
   public tssLib: WasmLib;
 
-  public trackingId?: string;
+  public trackingId: string;
 
   public _startPrecomputeTime: number;
 
@@ -178,7 +178,12 @@ export class Client {
     this._consumed = false;
     this._sLessThanHalf = true;
     this.tssLib = _tssLib;
-    this.trackingId = _trackingId;
+
+    if (_trackingId) {
+      this.trackingId = _trackingId;
+    } else {
+      this.trackingId = this.generateTrackingId();
+    }
 
     _sockets.forEach((socket) => {
       if (socket) {
@@ -487,5 +492,9 @@ export class Client {
         return Promise.resolve(true);
       })
     );
+  }
+
+  generateTrackingId() {
+    return Math.random().toString(36).substring(2, 15);
   }
 }
