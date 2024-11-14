@@ -86,14 +86,14 @@ export const getDKLSCoeff = (isUser: boolean, participatingServerIndexes: number
   return coeff;
 };
 
-export const createSockets = async (wsEndpoints: string[], sessionId: string): Promise<Socket[]> => {
+export const createSockets = async (wsEndpoints: string[], sessionId: string, trackingId?: string): Promise<Socket[]> => {
   return wsEndpoints.map((wsEndpoint) => {
     if (wsEndpoint === null || wsEndpoint === undefined) {
       return null;
     }
     return io(wsEndpoint, {
       path: "/tss/socket.io",
-      query: { sessionId },
+      query: { sessionId, trackingId },
       transports: ["websocket", "polling"],
       withCredentials: true,
       reconnectionDelayMax: 10000,
@@ -129,8 +129,8 @@ export const generateEndpoints = (parties: number, clientIndex: number) => {
   return { endpoints, tssWSEndpoints, partyIndexes };
 };
 
-export const setupSockets = async (tssWSEndpoints: string[], sessionId: string) => {
-  const sockets = await createSockets(tssWSEndpoints, sessionId);
+export const setupSockets = async (tssWSEndpoints: string[], sessionId: string, trackingId?: string) => {
+  const sockets = await createSockets(tssWSEndpoints, sessionId, trackingId);
   // wait for websockets to be connected
   await new Promise((resolve) => {
     const checkConnectionTimer = setInterval(() => {
