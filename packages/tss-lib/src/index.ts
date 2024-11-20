@@ -7,22 +7,59 @@ function wasm(): Uint8Array {
   return wasmBuffer;
 }
 
-export type WasmLib = typeof lib;
+export interface WasmLib {
+  threshold_signer: typeof lib.threshold_signer;
+  threshold_signer_free: typeof lib.threshold_signer_free;
+  random_generator: typeof lib.random_generator;
+  random_generator_free: typeof lib.random_generator_free;
+  setup: typeof lib.setup;
+  precompute: typeof lib.precompute;
+  local_sign: typeof lib.local_sign;
+  get_r_from_precompute: typeof lib.get_r_from_precompute;
+  local_verify: typeof lib.local_verify;
+  keyType: string;
+  sigType: string;
+}
 
 export async function load(): Promise<WasmLib> {
   const wasmBuffer = wasm();
   await initLib(wasmBuffer);
-  return lib;
+  return {
+    threshold_signer: lib.threshold_signer,
+    threshold_signer_free: lib.threshold_signer_free,
+    random_generator: lib.random_generator,
+    random_generator_free: lib.random_generator_free,
+    setup: lib.setup,
+    precompute: lib.precompute,
+    local_sign: lib.local_sign,
+    get_r_from_precompute: lib.get_r_from_precompute,
+    local_verify: lib.local_verify,
+    keyType: "secp256k1",
+    sigType: "ecdsa-secp256k1",
+  };
 }
 
 export function loadSync(): WasmLib {
   const wasmBuffer = wasm();
-  lib.initSync(wasmBuffer);
-  return lib;
+  lib.initSync({ module: wasmBuffer });
+  return {
+    threshold_signer: lib.threshold_signer,
+    threshold_signer_free: lib.threshold_signer_free,
+    random_generator: lib.random_generator,
+    random_generator_free: lib.random_generator_free,
+    setup: lib.setup,
+    precompute: lib.precompute,
+    local_sign: lib.local_sign,
+    get_r_from_precompute: lib.get_r_from_precompute,
+    local_verify: lib.local_verify,
+    keyType: "secp256k1",
+    sigType: "ecdsa-secp256k1",
+  };
 }
 
 export const tssLib = {
   keyType: "secp256k1",
+  sigType: "ecdsa-secp256k1",
   load,
   loadSync,
 };
