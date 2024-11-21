@@ -7,7 +7,7 @@ import { keccak256 } from "ethereum-cryptography/keccak";
 import type { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
-import { Msg } from "./interfaces";
+import { BatchSignParams, Msg } from "./interfaces";
 import { getEc } from "./utils";
 
 const MSG_READ_TIMEOUT = 10_000;
@@ -258,6 +258,106 @@ export class Client {
       this._precomputeFailed.push(this.index);
       console.error(e);
     });
+  }
+
+  async batch_sign(batch: BatchSignParams[], additionalParams?: Record<string, unknown>): Promise<{ r: BN; s: BN; recoveryParam: number }[]> {
+    if (batch.length <= 1) {
+      throw new Error("Not a batch");
+    }
+
+    if (batch.length > 5) {
+      throw new Error("Batch size is too large");
+    }
+
+    if (this._consumed === true) {
+      throw new Error("This instance has already signed a message and cannot be reused");
+    }
+
+    if (this._ready === false) {
+      throw new Error("client is not ready");
+    }
+
+    // check message hashing
+    for (let i = 0; i < batch.length; i++) {
+      if (!batch[i].hash_only) {
+        if (batch[i].hash_algo === "keccak256") {
+          if (Buffer.from(keccak256(Buffer.from(batch[i].original_message))).toString("base64") !== batch[i].msg) {
+            throw new Error("hash of original message does not match msg");
+          }
+        } else {
+          throw new Error(`hash algo ${batch[i].hash_algo} not supported`);
+        }
+      }
+    }
+
+    this._startSignTime = Date.now();
+    const sigFragments: Map<number, string[]> = new Map(); // message index, fragment
+    for (let i = 0; i < batch.length; i++) {
+      sigFragments.set(i, []);
+    }
+
+    for (let i = 0; i < this.parties.length; i++) {
+      const party = i;
+      if (party === this.index) {
+        // create signature fragment for this client
+        for (let m = 0; m < batch.length; m++) {
+          const currentFragments = sigFragments.get(m);
+          const fragment = await this.tssLib.local_sign(batch[m].msg, batch[m].hash_only, this.precomputed_value);
+          currentFragments.push(fragment);
+          sigFragments.set(m, currentFragments);
+        }
+      } else {
+        // collect signature fragment from all peers
+        const endpoint = this.lookupEndpoint(this.session, party);
+        const response = await fetch(`${endpoint}/batch_sign`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            [WEB3_SESSION_HEADER_KEY]: this.sid,
+          },
+          body: JSON.stringify({
+            session: this.session,
+            sender: this.index,
+            recipient: party,
+            batch,
+            ...additionalParams,
+          }),
+        }).then((res) => res.json());
+
+        response.sigs.forEach((res: string, m: number) => {
+          const currentFragments = sigFragments.get(m);
+          currentFragments.push(res);
+          sigFragments.set(m, currentFragments);
+        });
+      }
+    }
+
+    const R = await this.tssLib.get_r_from_precompute(this.precomputed_value);
+    const result: { r: BN; s: BN; recoveryParam: number }[] = [];
+
+    for (let m = 0; m < batch.length; m++) {
+      const sig = await this.tssLib.local_verify(batch[m].msg, batch[m].hash_only, R, sigFragments.get(m), this.pubKey);
+
+      const sigHex = Buffer.from(sig, "base64").toString("hex");
+      const r = new BN(sigHex.slice(0, 64), 16);
+      let s = new BN(sigHex.slice(64), 16);
+      let recoveryParam = Buffer.from(R, "base64")[63] % 2;
+      if (this._sLessThanHalf) {
+        const ec = getEc();
+        const halfOfSecp256k1n = ec.n.div(new BN(2));
+        if (s.gt(halfOfSecp256k1n)) {
+          s = ec.n.sub(s);
+          recoveryParam = (recoveryParam + 1) % 2;
+        }
+      }
+      result.push({ r, s, recoveryParam });
+    }
+    this._endSignTime = Date.now();
+
+    this._consumed = true;
+    this._ready = false;
+    this._readyResolve = null;
+    return result;
   }
 
   async sign(
