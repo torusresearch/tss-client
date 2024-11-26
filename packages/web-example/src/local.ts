@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 /* eslint-disable no-console */
 import { privateToAddress } from "@ethereumjs/util";
-import { BatchSignParams, Client } from "@toruslabs/tss-client";
+import { Client } from "@toruslabs/tss-client";
 import { load as loadLib } from "@toruslabs/tss-dkls-lib";
 import BN from "bn.js";
 import eccrypto, { generatePrivate } from "eccrypto";
@@ -237,96 +237,11 @@ const runPreNonceTest = async () => {
   client.log("client cleaned up");
 };
 
-const runBatchTest = async () => {
-  // this identifier is only required for testing,
-  // so that clients cannot override shares of actual users incase
-  // share route is exposed in production, which is exposed only in development/testing
-  // by default.
-  const testingRouteIdentifier = "testingShares";
-  const randomNonce = keccak256(generatePrivate().toString("hex") + Date.now());
-  const vid = `test_verifier_name${DELIMITERS.Delimiter1}test_verifier_id`;
-  const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
-    DELIMITERS.Delimiter4
-  }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
-
-  // generate mock signatures.
-  const signatures = getSignatures();
-
-  // const session = `test:${Date.now()}`;
-
-  const parties = 4;
-  const clientIndex = parties - 1;
-
-  // generate endpoints for servers
-  const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
-
-  // setup mock shares, sockets and tss wasm files.
-  const [{ pubKey, privKey }, sockets] = await Promise.all([setupMockShares(endpoints, partyIndexes, session), setupSockets(tssWSEndpoints)]);
-
-  const serverCoeffs: Record<number, string> = {};
-  const participatingServerDKGIndexes = [1, 2, 3];
-
-  for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
-    const serverIndex = participatingServerDKGIndexes[i];
-    serverCoeffs[serverIndex] = new BN(1).toString("hex");
-  }
-  // get the shares.
-  const share = await localStorageDB.get(`session-${session}:share`);
-
-  // Load WASM lib.
-  const tssLib = await loadLib();
-
-  // initialize client.
-  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssLib);
-  client.log = log;
-  // initiate precompute
-  client.precompute({ signatures, server_coeffs: serverCoeffs, _transport: 1 });
-  await client.ready();
-
-  const messages: BatchSignParams[] = [];
-  messages.push({
-    msg: msgHash.toString("base64"),
-    hash_only: true,
-    original_message: msg,
-    hash_algo: "keccak256",
-  });
-  messages.push({
-    msg: msgHash.toString("base64"),
-    hash_only: true,
-    original_message: msg,
-    hash_algo: "keccak256",
-  });
-  // initiate signature.
-  const sigs = await client.batch_sign(messages, { signatures });
-
-  for (let i = 0; i < sigs.length; i++) {
-    const signature = sigs[i];
-    const message = messages[i];
-    const msgHash = message.msg;
-    const buffer = Buffer.from(msgHash, "base64");
-    const hexToDecimal = (x: Buffer) => ec.keyFromPrivate(x).getPrivate().toString(10);
-    const pubk = ec.recoverPubKey(hexToDecimal(buffer), signature, signature.recoveryParam, "hex");
-
-    client.log(`pubkey, ${JSON.stringify(pubKey)}`);
-    client.log(`msgHash: 0x${buffer.toString("hex")}`);
-    client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
-    client.log(`address: 0x${Buffer.from(privateToAddress(privKey.toArrayLike(Buffer, "be", 32))).toString("hex")}`);
-    const passed = ec.verify(buffer, signature, pubk);
-
-    client.log(`passed: ${passed}`);
-  }
-  client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
-  client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-  await client.cleanup({ signatures });
-  client.log("client cleaned up");
-};
-
 export const runLocalServerTest = async () => {
   try {
     // for (let i = 0; i < 20; i++) {
     await runPreNonceTest();
     await runPostNonceTest();
-    await runBatchTest();
     // }
     console.log("test succeeded");
     document.title = "Test succeeded";
