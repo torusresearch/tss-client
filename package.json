@@ -37,7 +37,7 @@
     "@toruslabs/torus-scripts": "^6.1.6",
     "@types/elliptic": "^6.4.18",
     "babel-loader": "^9.2.1",
-    "chromedriver": "^130",
+    "chromedriver": "^140.0.0",
     "find-process": "^1.4.7",
     "husky": "^8.0.3",
     "lerna": "^8.1.8",
