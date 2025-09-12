@@ -6,5 +6,6 @@
     "paths": {
       "@toruslabs/*": ["packages/tss-*"]
     }
-  }
+  },
+  "files": []
 }

@@ -29,7 +29,6 @@
         "@toruslabs/torus.js": "^15.1.0",
         "@toruslabs/tss-client": "file:../tss-client",
         "@toruslabs/tss-dkls-lib": "file:../tss-lib",
-        "@toruslabs/tss-lib": "^2.3.0",
         "axios": "^1.6.0",
         "base64url": "^3.0.1",
         "bn.js": "^5.2.1",
