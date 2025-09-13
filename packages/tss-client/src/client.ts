@@ -18,6 +18,10 @@ type Log = {
 
 type MsgKey = string;
 
+function decodeMsgData(_msg_type: string, encoded_msg_data: Buffer) {
+  return Buffer.from(encoded_msg_data).toString("base64");
+}
+
 export class Client {
   public session: string;
 
@@ -108,12 +112,16 @@ export class Client {
 
         // Add listener for incoming messages
         socket.on("send", async (data, cb) => {
-          const { session, sender, recipient, msg_type, msg_data } = data;
+          const { session, sender, recipient, msg_type, msg_data, msg_data_encoded } = data;
           if (session !== this.session) {
             this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
             return;
           }
-          this.pushMessage({ session, sender, recipient, msg_type, msg_data });
+          let msg_data_decoded = msg_data;
+          if (msg_data_encoded) {
+            msg_data_decoded = decodeMsgData(msg_type, msg_data_encoded);
+          }
+          this.pushMessage({ session, sender, recipient, msg_type, msg_data: msg_data_decoded });
           if (cb) cb();
         });
         // Add listener for completion
@@ -219,6 +227,7 @@ export class Client {
                 pubkey: this.pubKey,
                 notifyWebsocketId: this.sockets[party].id,
                 sendWebsocket: this.sockets[party].id,
+                message_encoding: "bytes",
                 ...additionalParams,
               }),
             })
@@ -435,6 +444,27 @@ if (globalThis.js_read_msg === undefined) {
   };
 }
 
+const encodeMsgData = (msg_type: string, msg_data: string) => {
+  let encodedMsgData: Buffer | undefined;
+  // if (msg_type === "ga1_array") {
+  //   // Split msg_data into chunks of 45 characters and decode each chunk.
+  //   const chunks = msg_data.match(/.{1,45}/g);
+  //   encodedMsgData = Buffer.concat(chunks?.map((chunk) => Buffer.from(chunk, "base64")) || []);
+  // } else {
+  if (
+    msg_type.includes("ga1_array") ||
+    msg_type.includes("com_msg") ||
+    msg_type.includes("chal_msg") ||
+    msg_type.includes("msg_0_com") ||
+    msg_type.includes("msg_1_com")
+  ) {
+    encodedMsgData = undefined;
+  } else {
+    encodedMsgData = Buffer.from(msg_data, "base64");
+  }
+  return encodedMsgData;
+};
+
 if (globalThis.js_send_msg === undefined) {
   globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
     const tss_client = globalThis.tss_clients.get(session) as Client;
@@ -444,13 +474,16 @@ if (globalThis.js_send_msg === undefined) {
     }
 
     if (tss_client.websocketOnly) {
+      const encodedMsgData = encodeMsgData(msg_type, msg_data);
+
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
         session,
         sender: self_index,
         recipient: party,
         msg_type,
-        msg_data,
+        msg_data: encodedMsgData ? undefined : msg_data,
+        msg_data_encoded: encodedMsgData,
       });
     } else {
       const sid = session.split(DELIMITERS.Delimiter4)[1];
