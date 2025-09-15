@@ -1,6 +1,6 @@
 {
   "name": "@toruslabs/tss-dkls-lib",
-  "version": "5.0.0-alpha.0",
+  "version": "4.1.0",
   "description": "Packaged WASM library for DKLS threshold signing.",
   "main": "dist/tssDklsLib.cjs.js",
   "unpkg": "dist/tssDklsLib.umd.min.js",
