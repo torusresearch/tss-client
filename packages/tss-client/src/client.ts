@@ -8,6 +8,7 @@ import type { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
+import { decodeMsgData, encodeMsgData } from "./msgEncoding";
 import { getEc } from "./utils";
 
 const MSG_READ_TIMEOUT = 10_000;
@@ -17,10 +18,6 @@ type Log = {
 };
 
 type MsgKey = string;
-
-function decodeMsgData(_msg_type: string, encoded_msg_data: Buffer) {
-  return Buffer.from(encoded_msg_data).toString("base64");
-}
 
 export class Client {
   public session: string;
@@ -119,7 +116,8 @@ export class Client {
           }
           let msg_data_decoded = msg_data;
           if (msg_data_encoded) {
-            msg_data_decoded = decodeMsgData(msg_type, msg_data_encoded);
+            const buf = Buffer.from(msg_data_encoded);
+            msg_data_decoded = decodeMsgData(msg_type, buf);
           }
           this.pushMessage({ session, sender, recipient, msg_type, msg_data: msg_data_decoded });
           if (cb) cb();
@@ -443,27 +441,6 @@ if (globalThis.js_read_msg === undefined) {
     return mm.msg_data;
   };
 }
-
-const encodeMsgData = (msg_type: string, msg_data: string) => {
-  let encodedMsgData: Buffer | undefined;
-  // if (msg_type === "ga1_array") {
-  //   // Split msg_data into chunks of 45 characters and decode each chunk.
-  //   const chunks = msg_data.match(/.{1,45}/g);
-  //   encodedMsgData = Buffer.concat(chunks?.map((chunk) => Buffer.from(chunk, "base64")) || []);
-  // } else {
-  if (
-    msg_type.includes("ga1_array") ||
-    msg_type.includes("com_msg") ||
-    msg_type.includes("chal_msg") ||
-    msg_type.includes("msg_0_com") ||
-    msg_type.includes("msg_1_com")
-  ) {
-    encodedMsgData = undefined;
-  } else {
-    encodedMsgData = Buffer.from(msg_data, "base64");
-  }
-  return encodedMsgData;
-};
 
 if (globalThis.js_send_msg === undefined) {
   globalThis.js_send_msg = async function (session: string, self_index: number, party: number, msg_type: string, msg_data?: string) {
