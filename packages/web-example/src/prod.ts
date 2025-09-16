@@ -145,7 +145,7 @@ const runTest = async (testConfig: TestConfigType) => {
   const tssProcessingStart = window.performance.now();
   const lib = await tssLib.load();
 
-  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, lib);
+  const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, lib, testConfig.messageEncoding);
   client.log = (...args: unknown[]) => {
     log(testConfig.label, ...args);
   };
@@ -197,6 +197,7 @@ const runTest = async (testConfig: TestConfigType) => {
       label: "tss_signing_test",
       network: "sapphire_devnet",
       userType: "new",
+      // messageEncoding: "bytes",
     });
     console.log("test succeeded");
     document.title = "Test succeeded";
