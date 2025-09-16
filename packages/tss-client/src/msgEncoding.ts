@@ -11,9 +11,13 @@ function byteLenToBase64Len(byteLen: number): number {
 }
 
 function encodeChunks(dataBase64: string, chunkSize: number): Buffer {
-  const regex = new RegExp(`.{1,${chunkSize}}`, "g");
-  const chunks = dataBase64.match(regex);
-  return Buffer.concat(chunks?.map((chunk) => Buffer.from(chunk, "base64")) || []);
+  const chunks: Buffer[] = [];
+  for (let i = 0; i < dataBase64.length; i += chunkSize) {
+    const chunkBase64 = dataBase64.substring(i, i + chunkSize);
+    const chunk = Buffer.from(chunkBase64, "base64");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 export function encodeMsgData(msg_type: string, msg_data: string) {
