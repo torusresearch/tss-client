@@ -23,10 +23,8 @@ const DELIMITERS = {
   Delimiter3: "\u0016",
   Delimiter4: "\u0017",
 };
-const servers = 4;
 const msg = "hello world";
 const msgHash = keccak256(msg);
-const clientIndex = servers - 1;
 const ec = getEcCrypto();
 
 const log = (...args: unknown[]) => {
@@ -38,7 +36,7 @@ const log = (...args: unknown[]) => {
   console.log(msg);
 };
 
-const setupMockShares = async (endpoints: string[], parties: number[], session: string) => {
+const setupMockShares = async (endpoints: string[], parties: number[], session: string, clientIndex: number) => {
   const privKey = new BN(eccrypto.generatePrivate());
 
   const pubKeyElliptic = ec.curve.g.mul(privKey);
@@ -118,10 +116,13 @@ const runPostNonceTest = async () => {
   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
 
   // setup mock shares, sockets and tss wasm files.
-  const [{ pubKey, privKey }, sockets] = await Promise.all([setupMockShares(endpoints, partyIndexes, session), setupSockets(tssWSEndpoints)]);
+  const [{ pubKey, privKey }, sockets] = await Promise.all([
+    setupMockShares(endpoints, partyIndexes, session, clientIndex),
+    setupSockets(tssWSEndpoints),
+  ]);
 
   const serverCoeffs: Record<number, string> = {};
-  const participatingServerDKGIndexes = [1, 2, 3];
+  const participatingServerDKGIndexes = Array.from({ length: parties - 1 }, (_, i) => i + 1);
 
   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
     const serverIndex = participatingServerDKGIndexes[i];
@@ -196,10 +197,13 @@ const runPreNonceTest = async () => {
   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
 
   // setup mock shares, sockets and tss wasm files.
-  const [{ pubKey, privKey }, sockets] = await Promise.all([setupMockShares(endpoints, partyIndexes, session), setupSockets(tssWSEndpoints)]);
+  const [{ pubKey, privKey }, sockets] = await Promise.all([
+    setupMockShares(endpoints, partyIndexes, session, clientIndex),
+    setupSockets(tssWSEndpoints),
+  ]);
 
   const serverCoeffs: Record<number, string> = {};
-  const participatingServerDKGIndexes = [1, 2, 3];
+  const participatingServerDKGIndexes = Array.from({ length: parties - 1 }, (_, i) => i + 1);
 
   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
     const serverIndex = participatingServerDKGIndexes[i];
