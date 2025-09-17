@@ -18,5 +18,4 @@ export type TestConfigType = {
   userType: UserType;
   network: TORUS_SAPPHIRE_NETWORK_TYPE;
   verifier_id?: string;
-  messageEncoding?: "bytes" | "none";
 };

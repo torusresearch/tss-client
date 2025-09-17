@@ -8,7 +8,6 @@ import type { Socket } from "socket.io-client";
 
 import { DELIMITERS, WEB3_SESSION_HEADER_KEY } from "./constants";
 import { Msg } from "./interfaces";
-import { decodeMsgData, encodeMsgData } from "./msgEncoding";
 import { getEc } from "./utils";
 
 const MSG_READ_TIMEOUT = 10_000;
@@ -52,8 +51,6 @@ export class Client {
 
   public _sLessThanHalf: boolean;
 
-  public readonly _messageEncoding: "bytes" | "none";
-
   private _precomputeComplete: number[] = [];
 
   private _precomputeFailed: number[] = [];
@@ -81,8 +78,7 @@ export class Client {
     _share: string,
     _pubKey: string,
     _websocketOnly: boolean,
-    _tssLib: WasmLib,
-    _messageEncoding: "bytes" | "none" = "bytes"
+    _tssLib: WasmLib
   ) {
     if (_parties.length !== _sockets.length) {
       throw new Error("parties and sockets length must be equal, add null for client if necessary");
@@ -103,7 +99,6 @@ export class Client {
     this._consumed = false;
     this._sLessThanHalf = true;
     this.tssLib = _tssLib;
-    this._messageEncoding = _messageEncoding;
 
     _sockets.forEach((socket) => {
       if (socket) {
@@ -113,18 +108,12 @@ export class Client {
 
         // Add listener for incoming messages
         socket.on("send", async (data, cb) => {
-          const { session, sender, recipient, msg_type, msg_data, msg_data_encoded } = data;
+          const { session, sender, recipient, msg_type, msg_data } = data;
           if (session !== this.session) {
             this.log(`ignoring message for a different session... client session: ${this.session}, message session: ${session}`);
             return;
           }
-          let msg_data_decoded = msg_data;
-          const messageEncoding = this._messageEncoding;
-          if (msg_data_encoded && messageEncoding === "bytes") {
-            const buf = Buffer.from(msg_data_encoded);
-            msg_data_decoded = decodeMsgData(msg_type, buf);
-          }
-          this.pushMessage({ session, sender, recipient, msg_type, msg_data: msg_data_decoded });
+          this.pushMessage({ session, sender, recipient, msg_type, msg_data });
           if (cb) cb();
         });
         // Add listener for completion
@@ -230,7 +219,6 @@ export class Client {
                 pubkey: this.pubKey,
                 notifyWebsocketId: this.sockets[party].id,
                 sendWebsocket: this.sockets[party].id,
-                message_encoding: this._messageEncoding,
                 ...additionalParams,
               }),
             })
@@ -456,21 +444,13 @@ if (globalThis.js_send_msg === undefined) {
     }
 
     if (tss_client.websocketOnly) {
-      let msgData: string | undefined = msg_data;
-      let encodedMsgData: Buffer | undefined;
-      if (tss_client._messageEncoding === "bytes") {
-        msgData = undefined;
-        encodedMsgData = encodeMsgData(msg_type, msg_data);
-      }
-
       const socket = tss_client.sockets[party];
       socket.emit("send_msg", {
         session,
         sender: self_index,
         recipient: party,
         msg_type,
-        msg_data: msgData,
-        msg_data_encoded: encodedMsgData,
+        msg_data,
       });
     } else {
       const sid = session.split(DELIMITERS.Delimiter4)[1];
